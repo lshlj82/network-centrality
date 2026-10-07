@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <style>
 :root{
   --paper:#EDF2F5; --sheet:#F9FBFC; --ink:#1B2A3A; --muted:#566676; --grid:#D2DDE5; --grid-minor:#E3EAF0;
@@ -58,6 +61,17 @@ canvas{display:block; width:100%; max-width:100%}
 .chart.wide{aspect-ratio:16/7}
 @media (max-width:780px){ .chart.wide{aspect-ratio:4/3} }
 .scroll{overflow-x:auto}
+.pick{cursor:pointer; font-family:var(--body); font-weight:500; color:var(--ink)}
+.pick:hover{border-color:var(--path); background:var(--sheet)}
+.chip.pick.on{border-color:var(--path); color:var(--path)}
+.pairlist{max-height:280px; overflow:auto; border:1px solid var(--grid); border-radius:6px; background:var(--sheet)}
+.pairlist table{width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums}
+.pairlist th{position:sticky; top:0; background:var(--sheet); color:var(--muted); font-weight:500; text-align:right; padding:6px 12px; border-bottom:1px solid var(--grid)}
+.pairlist td{text-align:right; padding:4px 12px; border-bottom:1px solid var(--grid-minor)}
+.pairlist th:nth-child(2), .pairlist td:nth-child(2){text-align:left}
+.pairlist tbody tr{cursor:pointer}
+.pairlist tbody tr:hover td{background:var(--grid-minor)}
+.pairlist tr.on td{background:var(--grid-minor); box-shadow:inset 0 -2px 0 var(--path)}
 .scroll svg.graph{min-width:620px}
 svg.graph{display:block; width:100%; height:auto; overflow:visible}
 svg.graph [data-n]{cursor:pointer}
@@ -91,10 +105,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, .seg input:focu
 .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
 .chip{border:1.5px solid var(--grid); border-radius:999px; padding:3px 12px; font-size:14px; font-variant-numeric:tabular-nums; background:var(--sheet)}
 .chip.on{border-color:var(--hub); color:var(--hub)}
-.formula{font-family:"Times New Roman",Times,serif; font-style:italic; font-size:19px; white-space:nowrap}
-.formula.big{display:block; font-size:24px; margin:10px 0 14px; white-space:normal}
-.frac{display:inline-flex; flex-direction:column; vertical-align:middle; text-align:center; margin:0 3px}
-.frac > span:first-child{border-bottom:1px solid currentColor; padding:0 4px}
+.katex{font-size:1.1em}
+.formula.big{display:block; font-size:18px; margin:6px 0 16px; overflow-x:auto; overflow-y:hidden; padding:4px 0; max-width:100%}
+.formula.big .katex-display{margin:0}
+.formula.big .katex-display.fleqn > .katex{padding-left:0}
+.callout .katex, .legend .katex, .note .katex{font-size:1em}
 .tip{position:fixed; pointer-events:none; background:var(--ink); color:var(--sheet); font-size:13px; padding:3px 8px; border-radius:4px; opacity:0; transition:opacity .1s; z-index:5}
 .ranks{width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums}
 .ranks th{font-weight:500; color:var(--muted); text-align:left; padding:4px 6px 6px; border-bottom:1px solid var(--grid); vertical-align:bottom}
@@ -118,8 +133,18 @@ footer p{max-width:80ch}
 .status{font-size:13px; color:var(--muted); min-height:1.4em}
 @media (prefers-reduced-motion: reduce){ .tip{transition:none} }
 </style>
+<script>try { const t = localStorage.getItem("netsci-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+button.theme-btn{position:fixed; z-index:20; top:calc(env(safe-area-inset-top, 0px) + 12px); right:calc(env(safe-area-inset-right, 0px) + 12px);
+  width:40px; height:40px; padding:0; border-radius:50%; display:grid; place-items:center; cursor:pointer;
+  background:var(--sheet, var(--paper)); color:var(--ink); border:1px solid var(--grid, var(--rule)); box-shadow:0 1px 4px rgba(0,0,0,.12)}
+button.theme-btn:hover{background:var(--sheet, var(--paper)); color:var(--ink); border-color:var(--ink)}
+button.theme-btn:focus-visible{outline:3px solid var(--focus, var(--node)); outline-offset:2px}
+button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+</style>
 </head>
 <body>
+<button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
 <div class="tip" id="tip"></div>
 
 <header class="wrap">
@@ -168,67 +193,91 @@ footer p{max-width:80ch}
 
 <section id="closeness">
   <h2>How close is a node to everyone else?</h2>
-  <p>Degree is the simplest centrality: the number of neighbors, <code>G.degree(i)</code> ≡ <code>len(G.neighbors(i))</code>. In the small network below, node 3 has the most links, so it is the hub. Closeness asks a different question. Add up the distances <i>l<sub>ij</sub></i> from node <i>i</i> to every other node and take the inverse:</p>
-  <p class="formula big">g<sub>i</sub> = <span class="frac"><span>1</span><span>Σ<sub>j≠i</sub> l<sub>ij</sub></span></span> , &nbsp; g̃<sub>i</sub> = (N − 1) g<sub>i</sub> = <span class="frac"><span>1</span><span>Σ<sub>j≠i</sub> l<sub>ij</sub> / (N − 1)</span></span></p>
-  <p>A short total distance means high closeness. The rescaled version g̃ is the inverse of the average distance from <i>i</i>.</p>
+  <p>Degree is the simplest centrality: the number of neighbors, <code>G.degree(i)</code> ≡ <code>len(G.neighbors(i))</code>. In the small network below, node 3 has the most links, so it is the hub. Closeness asks a different question. Add up the distances \(l_{ij}\) from node \(i\) to every other node and take the inverse:</p>
+  <p class="formula big">\[ g_i = \frac{1}{\sum_{j\neq i} l_{ij}}, \qquad \tilde g_i = (N-1)\,g_i = \frac{1}{\sum_{j\neq i} l_{ij}\,/\,(N-1)} \]</p>
+  <p>A short total distance means high closeness. The rescaled version \(\tilde g_i\) is the inverse of the average distance from \(i\). Pick a node, then pick any other node in the list to see the shortest paths behind each distance.</p>
   <div class="two">
     <div class="sheet">
       <h3>Pick a node</h3>
       <p class="note">Numbers inside the circles are distances from the node you picked. Labels outside are node numbers and degrees.</p>
       <svg class="graph" id="cloSvg" viewBox="0 0 580 370" role="group" aria-label="Seven-node network for closeness"></svg>
+      <div class="legend"><span style="color:var(--path)"><span class="line-key"></span>Shortest paths to the destination you pick</span></div>
     </div>
     <div>
       <p class="callout" id="cloText" style="margin-top:0"></p>
-      <p class="note" style="margin-top:14px">Closeness of every node, highest first</p>
+      <p class="note" style="margin-top:18px">Where each distance comes from: pick a destination</p>
+      <div class="chips" id="cloPaths"></div>
+      <div class="controls" style="margin:12px 0 0"><button id="cloNext" type="button">Next destination</button></div>
+      <p id="cloPathText" style="margin-top:12px"></p>
+      <p class="note" style="margin-top:18px">Closeness of every node, highest first</p>
       <div class="chips" id="cloChips"></div>
     </div>
   </div>
 
-  <h3 style="margin-top:36px">Why rescale by N − 1</h3>
-  <p>The sum in g<sub>i</sub> has N − 1 terms, so it grows with the size of the network. In the language of thermodynamics it is extensive, like volume: two rabbits have twice the volume of one, but not twice the temperature. Raw closeness therefore shrinks as the network grows, and you cannot compare it across networks. Dividing by the number of terms gives an average, which behaves like an intensive quantity. It still drifts down slowly, because average distances themselves grow like log N, but it no longer collapses. Rankings inside one network do not change either way.</p>
+  <h3 style="margin-top:36px">Why rescale by \(N-1\)</h3>
+  <p>The sum in \(g_i\) has \(N-1\) terms, so it grows with the size of the network. In the language of thermodynamics it is extensive, like volume: two rabbits have twice the volume of one, but not twice the temperature. Raw closeness therefore shrinks as the network grows, and you cannot compare it across networks. Dividing by the number of terms gives an average, which behaves like an intensive quantity. It still drifts down slowly, because average distances themselves grow like \(\log N\), but it no longer collapses. Rankings inside one network do not change either way.</p>
   <div class="two">
     <div class="sheet">
-      <h3>Raw closeness g</h3>
+      <h3>Raw closeness \(g\)</h3>
       <canvas id="gRawCv" class="chart" aria-label="Average raw closeness versus network size"></canvas>
     </div>
     <div class="sheet">
-      <h3>Rescaled closeness g̃</h3>
+      <h3>Rescaled closeness \(\tilde g\)</h3>
       <canvas id="gNormCv" class="chart" aria-label="Average rescaled closeness versus network size"></canvas>
     </div>
   </div>
   <div class="legend">
-    <span style="color:var(--er)"><span class="line-key"></span>Random network, ⟨k⟩ = 4</span>
-    <span style="color:var(--sf)"><span class="line-key"></span>Scale-free network, ⟨k⟩ = 4</span>
-    <span style="color:var(--muted)"><span class="line-key dash"></span>1/N for comparison</span>
+    <span style="color:var(--er)"><span class="line-key"></span>Random network, \(\langle k\rangle = 4\)</span>
+    <span style="color:var(--sf)"><span class="line-key"></span>Scale-free network, \(\langle k\rangle = 4\)</span>
+    <span style="color:var(--muted)"><span class="line-key dash"></span>\(1/N\) for comparison</span>
   </div>
   <p class="status" id="gStatus"></p>
 </section>
 
 <section id="betweenness">
   <h2>Who sits on the shortest paths?</h2>
-  <p>Take every pair of nodes <i>h</i> and <i>j</i>, find the shortest paths between them, and give each node in the middle a point. When there are several shortest paths, the point is shared out: <span class="formula">σ<sub>hj</sub></span> counts the shortest paths from <i>h</i> to <i>j</i> and <span class="formula">σ<sub>hj</sub>(i)</span> counts the ones through <i>i</i>.</p>
-  <p class="formula big">b<sub>i</sub> = Σ<sub>h≠j≠i</sub> <span class="frac"><span>σ<sub>hj</sub>(i)</span><span>σ<sub>hj</sub></span></span> , &nbsp; b̃<sub>i</sub> = <span class="frac"><span>b<sub>i</sub></span><span>(N − 1)(N − 2) / 2</span></span></p>
-  <p>The normalized b̃ divides by the number of pairs that do not include <i>i</i>, for the same reason closeness is rescaled. Replace “node <i>i</i>” with “link <i>i</i>” and you get edge betweenness. Nodes and links with high betweenness carry most of the traffic, so they are the bottlenecks for transport and spreading.</p>
+  <p>Take every pair of nodes \(h\) and \(j\), find the shortest paths between them, and give each node in the middle a point. When there are several shortest paths, the point is shared out: \(\sigma_{hj}\) counts the shortest paths from \(h\) to \(j\) and \(\sigma_{hj}(i)\) counts the ones through \(i\).</p>
+  <p class="formula big">\[ b_i = \sum_{h\neq j\neq i} \frac{\sigma_{hj}(i)}{\sigma_{hj}}, \qquad \tilde b_i = \frac{b_i}{(N-1)(N-2)/2} \]</p>
+  <p>The normalized \(\tilde b_i\) divides by the number of pairs that do not include \(i\), for the same reason closeness is rescaled. Replace “node \(i\)” with “link \(i\)” and you get edge betweenness. Nodes and links with high betweenness carry most of the traffic, so they are the bottlenecks for transport and spreading. Below, look at one pair at a time, or pick a node or a link and step through every pair that adds to its betweenness.</p>
   <div class="controls">
+    <div class="ctl">Explore
+      <div class="seg" role="radiogroup" aria-label="What to explore">
+        <label><input type="radio" name="bpick" value="pair" checked><span>One pair</span></label>
+        <label><input type="radio" name="bpick" value="node"><span>A node’s whole sum</span></label>
+        <label><input type="radio" name="bpick" value="edge"><span>A link’s whole sum</span></label>
+      </div>
+    </div>
     <div class="ctl">Size and shade by
       <div class="seg" role="radiogroup" aria-label="Betweenness display">
         <label><input type="radio" name="bmode" value="node" checked><span>Node betweenness</span></label>
         <label><input type="radio" name="bmode" value="edge"><span>Edge betweenness</span></label>
       </div>
     </div>
-    <button id="bClear" type="button">Clear path</button>
+    <button id="bClear" type="button">Clear</button>
   </div>
   <div class="sheet">
     <div class="scroll"><svg class="graph" id="btwSvg" viewBox="0 0 760 440" role="group" aria-label="Network with a bottleneck, for betweenness"></svg></div>
     <div class="legend">
-      <span>Pick two nodes, j and k, to see every shortest path between them.</span>
-      <span style="color:var(--path)"><span class="line-key"></span>Shortest paths and the share each node gets</span>
+      <span id="bHint">Pick two nodes, h and j, to see every shortest path between them.</span>
+      <span style="color:var(--path)"><span class="line-key"></span>Shortest paths from h to j, with each node’s share</span>
+      <span style="color:var(--hub)"><span class="line-key"></span>The node or link being added up</span>
     </div>
   </div>
   <p class="callout" id="btwText"></p>
+  <div id="bWalk" hidden>
+    <div class="controls" style="margin:12px 0">
+      <button id="bPrev" type="button">Previous pair</button>
+      <button id="bNext" type="button">Next pair</button>
+      <button id="bPlay" type="button">Play</button>
+      <label class="ctl" style="min-width:220px">Pair <output id="bStepOut"></output>
+        <input type="range" id="bStep" min="0" max="0" value="0"></label>
+      <label class="ctl check"><input type="checkbox" id="bZero"> Also list pairs that add nothing</label>
+    </div>
+    <div class="pairlist" id="bList" tabindex="0" aria-label="Every pair that adds to the total"></div>
+  </div>
 
   <h3 style="margin-top:36px">Many links, or the only bridge</h3>
-  <p>Degree and betweenness often go together, but not always. In both networks below, node 3 is highlighted. On the left it has many links and modest betweenness. On the right it has only two links, yet every path between the group of four and the group of five must cross it, so b<sub>3</sub> = 4 × 5 = 20. Pick any node to see its values.</p>
+  <p>Degree and betweenness often go together, but not always. In both networks below, node 3 is highlighted. On the left it has many links and modest betweenness. On the right it has only two links, yet every path between the group of four and the group of five must cross it, so \(b_3 = 4\times 5 = 20\). Pick any node to see its values.</p>
   <div class="two">
     <div class="sheet"><svg class="graph" id="figA" viewBox="-20 0 340 200" role="group" aria-label="Five-node example"></svg><p class="callout" id="figAText" style="text-align:center; max-width:none"></p></div>
     <div class="sheet"><svg class="graph" id="figB" viewBox="0 0 460 200" role="group" aria-label="Ten-node bridge example"></svg><p class="callout" id="figBText" style="text-align:center; max-width:none"></p></div>
@@ -239,7 +288,7 @@ footer p{max-width:80ch}
   <h2>Degree and betweenness usually agree</h2>
   <p>Plot every node’s betweenness against its degree. In most networks the cloud runs up and to the right: hubs lie on many shortest paths simply because so many paths can pass through them. Goh and colleagues found this in the internet’s router-level map. Networks made of tight groups joined by a few links break the pattern. The nodes at the ends of those links have ordinary degree but carry all the traffic between groups.</p>
   <div class="controls">
-    <label class="ctl">Network (2,000 nodes, ⟨k⟩ ≈ 4 to 6)
+    <label class="ctl">Network (2,000 nodes, \(\langle k\rangle \approx 4\) to 6)
       <select id="corrNet">
         <option value="sf" selected>Scale-free</option>
         <option value="er">Random</option>
@@ -260,15 +309,15 @@ footer p{max-width:80ch}
 
 <section id="distributions">
   <h2>Centrality distributions</h2>
-  <p>Ranking finds the single most important node, which is a question about extreme values. To understand a whole network you need the full spectrum: how many nodes have each value. Count the n<sub>k</sub> nodes with degree k and you get a histogram with Σ n<sub>k</sub> = N. Divide by N and you get relative frequencies f<sub>k</sub>, which approach the probability distribution p<sub>k</sub> as the network grows. Betweenness and closeness are not whole numbers, so they are counted in bins.</p>
+  <p>Ranking finds the single most important node, which is a question about extreme values. To understand a whole network you need the full spectrum: how many nodes have each value. Count the \(n_k\) nodes with degree \(k\) and you get a histogram with \(\sum_k n_k = N\). Divide by \(N\) and you get relative frequencies \(f_k = n_k/N\), which approach the probability distribution \(p_k\) as the network grows. Betweenness and closeness are not whole numbers, so they are counted in bins.</p>
   <div class="sheet">
     <h3 id="histTitle">Histogram of the network at the top</h3>
     <canvas id="histCv" class="chart wide" aria-label="Histogram of the chosen centrality"></canvas>
-    <p class="note" style="margin-top:8px">Network and measure follow the choices at the top of the page. Left axis: count n. Right axis: fraction f = n / N.</p>
+    <p class="note" style="margin-top:8px">Network and measure follow the choices at the top of the page. Left axis: count \(n\). Right axis: fraction \(f = n/N\).</p>
   </div>
 
   <h3 style="margin-top:36px">Choosing the axes</h3>
-  <p>A distribution that spans several orders of magnitude needs logarithmic axes. On linear axes an exponential <span class="formula">p(k) ∝ e<sup>−k</sup></span> and a power law <span class="formula">p(k) ∝ k<sup>−3</sup></span> look much alike. A semi-log plot turns the exponential into a straight line. A log–log plot turns the power law into a straight line and shows how much heavier its tail is.</p>
+  <p>A distribution that spans several orders of magnitude needs logarithmic axes. On linear axes an exponential \(p(k)\propto e^{-k}\) and a power law \(p(k)\propto k^{-3}\) look much alike. A semi-log plot turns the exponential into a straight line. A log–log plot turns the power law into a straight line and shows how much heavier its tail is.</p>
   <div class="controls">
     <div class="ctl">Axes
       <div class="seg" role="radiogroup" aria-label="Axis scale">
@@ -281,17 +330,17 @@ footer p{max-width:80ch}
   <div class="sheet">
     <canvas id="scaleCv" class="chart wide" aria-label="Exponential and power-law distributions"></canvas>
     <div class="legend">
-      <span style="color:var(--er)"><span class="line-key"></span>Exponential, p(k) ∝ e<sup>−k</sup></span>
-      <span style="color:var(--sf)"><span class="line-key"></span>Power law, p(k) ∝ k<sup>−3</sup></span>
+      <span style="color:var(--er)"><span class="line-key"></span>Exponential, \(p(k)\propto e^{-k}\)</span>
+      <span style="color:var(--sf)"><span class="line-key"></span>Power law, \(p(k)\propto k^{-3}\)</span>
     </div>
   </div>
 
   <h3 style="margin-top:36px">Cumulative distributions</h3>
-  <p>Large values are rare, so the tail of p(k) is noisy. The cumulative distribution <span class="formula">P(k) = Σ<sub>k′≥k</sub> p(k′)</span>, the share of nodes with value at least k, averages that noise out. For a power law it is again a power law, one step shallower: <span class="formula">p(k) ∝ k<sup>−γ</sup></span> gives <span class="formula">P(k) ∝ k<sup>−(γ−1)</sup></span>, defined for γ &gt; 1. For an exponential it stays exponential. Real networks such as Twitter and Wikipedia show heavy tails spanning several orders of magnitude, for degree and for betweenness alike.</p>
+  <p>Large values are rare, so the tail of \(p(k)\) is noisy. The cumulative distribution \(P(k)=\sum_{k'\ge k} p(k')\), the share of nodes with value at least \(k\), averages that noise out. For a power law it is again a power law, one step shallower: \(p(k)\propto k^{-\gamma}\) gives \(P(k)\propto k^{-(\gamma-1)}\), defined for \(\gamma>1\). For an exponential it stays exponential. Real networks such as Twitter and Wikipedia show heavy tails spanning several orders of magnitude, for degree and for betweenness alike.</p>
   <div class="controls">
     <label class="ctl">Nodes
       <select id="cumN"><option value="2000" selected>2,000</option><option value="5000">5,000</option></select></label>
-    <label class="ctl check"><input type="checkbox" id="showRaw"> Show p(k) as points</label>
+    <label class="ctl check"><input type="checkbox" id="showRaw"> Show \(p(k)\) as points</label>
     <span class="status" id="cumStatus"></span>
   </div>
   <div class="two">
@@ -307,34 +356,34 @@ footer p{max-width:80ch}
   <div class="legend">
     <span style="color:var(--er)"><span class="line-key"></span>Random network</span>
     <span style="color:var(--sf)"><span class="line-key"></span>Scale-free network</span>
-    <span style="color:var(--muted)"><span class="line-key dash"></span>P(k) ∝ k<sup>−2</sup>, the γ = 3 prediction</span>
+    <span style="color:var(--muted)"><span class="line-key dash"></span>\(P(k)\propto k^{-2}\), the \(\gamma = 3\) prediction</span>
   </div>
 </section>
 
 <section id="heterogeneity">
   <h2>How wide is the distribution?</h2>
   <p>Hubs are nodes with exceptionally large degree, but in a heavy-tailed distribution they are not exceptional in a mathematical sense: they are part of the same smooth tail. A single number captures how broad that tail is. Average the squared degrees and compare with the squared average:</p>
-  <p class="formula big">⟨k<sup>2</sup>⟩ = <span class="frac"><span>Σ<sub>i</sub> k<sub>i</sub><sup>2</sup></span><span>N</span></span> , &nbsp; κ = <span class="frac"><span>⟨k<sup>2</sup>⟩</span><span>⟨k⟩<sup>2</sup></span></span></p>
-  <p>When degrees cluster around one value k<sub>0</sub>, both averages are close to k<sub>0</sub><sup>2</sup> and κ ≈ 1. When a few hubs have huge degrees, their squares dominate ⟨k<sup>2</sup>⟩ and κ ≫ 1. For a random network κ = 1 + 1/⟨k⟩ whatever its size. For a power law with γ &lt; 3, κ keeps growing as the network grows, because the largest hub does.</p>
+  <p class="formula big">\[ \langle k^2\rangle = \frac{1}{N}\sum_i k_i^2, \qquad \kappa = \frac{\langle k^2\rangle}{\langle k\rangle^2} \]</p>
+  <p>When degrees cluster around one value \(k_0\), both averages are close to \(k_0^2\) and \(\kappa\approx 1\). When a few hubs have huge degrees, their squares dominate \(\langle k^2\rangle\) and \(\kappa\gg 1\). For a random network \(\kappa = 1 + 1/\langle k\rangle\) whatever its size. For a power law with \(\gamma<3\), \(\kappa\) keeps growing as the network grows, because the largest hub does.</p>
   <div class="controls">
-    <label class="ctl">Exponent γ of the power-law sample <output id="kgOut">2.5</output>
+    <label class="ctl">Exponent \(\gamma\) of the power-law sample <output id="kgOut">2.5</output>
       <input type="range" id="kgIn" min="2.1" max="3.5" step="0.1" value="2.5"></label>
     <span class="status" id="kapStatus"></span>
     <span class="status">Each point is the median of 21 samples.</span>
   </div>
   <div class="two">
     <div class="sheet">
-      <h3>κ as the network grows</h3>
+      <h3>\(\kappa\) as the network grows</h3>
       <canvas id="kapCv" class="chart" aria-label="Heterogeneity parameter versus network size"></canvas>
       <div class="legend">
         <span style="color:var(--er)"><span class="line-key"></span>Random</span>
-        <span style="color:var(--sf)"><span class="line-key"></span>Scale-free (BA, γ = 3)</span>
-        <span style="color:var(--hub)"><span class="line-key"></span>Power-law degrees, chosen γ</span>
+        <span style="color:var(--sf)"><span class="line-key"></span>Scale-free (BA, \(\gamma = 3\))</span>
+        <span style="color:var(--hub)"><span class="line-key"></span>Power-law degrees, chosen \(\gamma\)</span>
       </div>
     </div>
     <div class="sheet">
       <h3>Real networks</h3>
-      <p class="note">κ for the networks in Table 3.1 of Menczer, Fortunato and Davis, with your two 10,000-node networks added. Bars are on a log scale.</p>
+      <p class="note">\(\kappa\) for the networks in Table 3.1 of Menczer, Fortunato and Davis, with your two 10,000-node networks added. Bars are on a log scale.</p>
       <div class="bars" id="kapBars"></div>
     </div>
   </div>
@@ -349,6 +398,11 @@ footer p{max-width:80ch}
 <script>
 (() => {
 "use strict";
+
+/* ---------- math typesetting (KaTeX, with plain TeX as the fallback) ---------- */
+const MATH_OPTS = { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], throwOnError: false, fleqn: true, trust: c => c.command === "\\htmlClass" };
+function typeset(el){ if (window.renderMathInElement && el) renderMathInElement(el, MATH_OPTS); }
+function setMath(el, html){ el.innerHTML = html; typeset(el); }
 const $ = id => document.getElementById(id);
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let RNG = Math.random;
@@ -551,6 +605,13 @@ function makeAxis(a, p0, p1){
   f.minor = minor; f.min = a.min; f.max = a.max;
   return f;
 }
+// axis labels: text between asterisks is set as an italic math variable, the rest upright
+function richText(ctx, s, x, y){
+  const parts = String(s).split("*"), fonts = parts.map((_, i) => i % 2 ? "italic 15px 'Times New Roman', Times, serif" : "13px " + bodyFont());
+  let w = 0; parts.forEach((p, i) => { ctx.font = fonts[i]; w += ctx.measureText(p).width; });
+  let cx = x - w / 2; ctx.textAlign = "left";
+  parts.forEach((p, i) => { ctx.font = fonts[i]; ctx.fillText(p, cx, y); cx += ctx.measureText(p).width; });
+}
 function plot(cv, o){
   const { ctx, w, h } = setup(cv);
   const pad = Object.assign({ l: 56, r: 24, t: 12, b: o.x.label ? 46 : 28 }, o.pad || {});
@@ -573,9 +634,9 @@ function plot(cv, o){
   if (!o.x.hideTicks) X.major.forEach(v => ctx.fillText(X.fmt(v), X(v), h - pad.b + 6));
   ctx.textAlign = "right"; ctx.textBaseline = "middle";
   if (!o.y.hideTicks) Y.major.forEach(v => ctx.fillText(Y.fmt(v), pad.l - 6, Y(v)));
-  ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.font = "italic 14px 'Times New Roman', serif"; ctx.fillStyle = C.ink;
-  if (o.x.label) ctx.fillText(o.x.label, (pad.l + w - pad.r) / 2, h - 4);
-  if (o.y.label){ ctx.save(); ctx.translate(14, (pad.t + h - pad.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle"; ctx.fillText(o.y.label, 0, 0); ctx.restore(); }
+  ctx.textBaseline = "bottom"; ctx.fillStyle = C.ink;
+  if (o.x.label) richText(ctx, o.x.label, (pad.l + w - pad.r) / 2, h - 4);
+  if (o.y.label){ ctx.save(); ctx.translate(14, (pad.t + h - pad.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle"; richText(ctx, o.y.label, 0, 0); ctx.restore(); }
   ctx.save();
   ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
   const ok = (x, y) => isFinite(x) && isFinite(y) && (!o.x.log || x > 0) && (!o.y.log || y > 0);
@@ -747,59 +808,104 @@ $("regen").addEventListener("click", regenHero);
 /* ---------- small SVG graphs ---------- */
 const NS = "http://www.w3.org/2000/svg";
 function svgEl(tag, attrs, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
-function makeSmall(svg, pos, edgeList, onPick){
+function makeSmall(svg, pos, edgeList, onPick, onEdge){
   const N = pos.length, flat = []; edgeList.forEach(([a, b]) => flat.push(a, b));
   const g = build(N, flat);
-  svg.addEventListener("click", e => { const n = e.target.closest("[data-n]"); if (n) onPick(+n.dataset.n); });
-  svg.addEventListener("keydown", e => { const n = e.target.closest("[data-n]"); if (n && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); onPick(+n.dataset.n); } });
+  const act = e => { const n = e.target.closest("[data-n]"); if (n) return onPick(+n.dataset.n); const l = e.target.closest("[data-e]"); if (l && onEdge) onEdge(+l.dataset.e); };
+  svg.addEventListener("click", act);
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ const t = e.target.closest("[data-n],[data-e]"); if (t){ e.preventDefault(); act(e); } } });
   return { g, pos, render(o){
-    const focused = document.activeElement && svg.contains(document.activeElement) ? document.activeElement.dataset.n : null;
+    const fa = document.activeElement, focused = fa && svg.contains(fa) ? (fa.dataset.n !== undefined ? `[data-n="${fa.dataset.n}"]` : `[data-e="${fa.dataset.e}"]`) : null;
     svg.textContent = "";
     const eg = svgEl("g", {}, svg);
     edgeList.forEach(([a, b], e) => {
       svgEl("line", { x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: `stroke:${o.edgeColor ? o.edgeColor(e) : "var(--muted)"};stroke-width:${o.edgeWidth ? o.edgeWidth(e) : 2};stroke-linecap:round;stroke-opacity:${o.edgeOpacity ? o.edgeOpacity(e) : .55}` }, eg);
     });
+    if (o.edgeHit) edgeList.forEach(([a, b], e) => {
+      svgEl("line", { "data-e": e, tabindex: 0, role: "button", "aria-label": o.edgeAria ? o.edgeAria(e) : `Link ${a + 1}–${b + 1}`, class: "hit", x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: "stroke:transparent;stroke-width:14;cursor:pointer" }, eg);
+    });
     if (o.edgeLabel) edgeList.forEach(([a, b], e) => { const t = o.edgeLabel(e); if (!t) return;
       const mx = (pos[a][0] + pos[b][0]) / 2, my = (pos[a][1] + pos[b][1]) / 2;
-      const tx = svgEl("text", { x: mx, y: my - 10, "text-anchor": "middle", style: "fill:var(--path);font:600 14px var(--body);paint-order:stroke;stroke:var(--sheet);stroke-width:4px" }, svg); tx.textContent = t; });
+      const tx = svgEl("text", { x: mx, y: my - 10, "text-anchor": "middle", style: `fill:${o.edgeLabelColor ? o.edgeLabelColor(e) : "var(--path)"};font:700 14px var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px` }, svg); tx.textContent = t; });
     for (let i = 0; i < N; i++){
       const r = o.r ? o.r(i) : 18;
       const ng = svgEl("g", { "data-n": i, tabindex: 0, role: "button", "aria-label": o.aria ? o.aria(i) : `Node ${i + 1}` }, svg);
-      svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r + 8, style: "fill:transparent" }, ng);
+      svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r + 6, style: "fill:transparent" }, ng);
       svgEl("circle", { class: "body", cx: pos[i][0], cy: pos[i][1], r, style: `fill:var(--sheet);stroke:${o.stroke ? o.stroke(i) : "var(--ink)"};stroke-width:${o.strokeW ? o.strokeW(i) : 2.5}` }, ng);
       if (o.fill){ const [col, op] = o.fill(i); svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r - 1, style: `fill:${col};fill-opacity:${op};pointer-events:none` }, ng); }
-      if (o.inner){ const [t, col] = o.inner(i); if (t !== ""){ const tx = svgEl("text", { x: pos[i][0], y: pos[i][1] + 1, "text-anchor": "middle", "dominant-baseline": "middle", style: `fill:${col || "var(--ink)"};font:600 ${r > 14 ? 16 : 12}px var(--body);pointer-events:none` }, ng); tx.textContent = t; } }
+      if (o.inner){ const [t, col] = o.inner(i); if (t !== ""){ const fs = o.innerSize ? o.innerSize(i) : r > 14 ? 16 : 12; const tx = svgEl("text", { x: pos[i][0], y: pos[i][1] + 1, "text-anchor": "middle", "dominant-baseline": "middle", style: `fill:${col || "var(--ink)"};font:600 ${fs}px var(--body);pointer-events:none` }, ng); tx.textContent = t; } }
       if (o.outer){ const t = o.outer(i); if (t){ const [dx, dy] = o.outerAt ? o.outerAt(i) : [0, -r - 9];
-        const tx = svgEl("text", { x: pos[i][0] + dx, y: pos[i][1] + dy, "text-anchor": "middle", style: "fill:var(--muted);font:13px var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px" }, ng); tx.textContent = t; } }
+        const tx = svgEl("text", { x: pos[i][0] + dx, y: pos[i][1] + dy, "text-anchor": "middle", style: `fill:${o.outerColor ? o.outerColor(i) : "var(--muted)"};font:${o.outerColor ? "700 15px" : "13px"} var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px` }, ng); tx.textContent = t; } }
     }
     if (o.badge) for (let i = 0; i < N; i++){ const t = o.badge(i); if (!t) continue; const r = o.r ? o.r(i) : 18;
-      const tx = svgEl("text", { x: pos[i][0] + r + 3, y: pos[i][1] - r + 2, style: "fill:var(--path);font:700 14px var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px" }, svg); tx.textContent = t; }
-    if (focused !== null){ const el = svg.querySelector(`[data-n="${focused}"]`); if (el) el.focus({ preventScroll: true }); }
+      const tx = svgEl("text", { x: pos[i][0] + r + 3, y: pos[i][1] - r + 2, style: `fill:${o.badgeColor ? o.badgeColor(i) : "var(--path)"};font:700 14px var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px` }, svg); tx.textContent = t; }
+    if (focused){ const el = svg.querySelector(focused); if (el) el.focus({ preventScroll: true }); }
   } };
 }
+
+/* ---------- shortest paths shared by both explorers ---------- */
+function allPairsSP(g){
+  const D = [], S = [];
+  for (let s = 0; s < g.N; s++){ const r = bfs(g, s); D.push(r.dist); S.push(r.sig); }
+  return { D, S };
+}
+function listPaths(g, D, s, t, limit = 40){
+  const out = [];
+  const walk = (v, tail) => {
+    if (out.length >= limit) return;
+    if (v === s){ out.push([s, ...tail]); return; }
+    for (let p = g.off[v]; p < g.off[v + 1]; p++){ const u = g.nbr[p]; if (D[s][u] === D[s][v] - 1) walk(u, [v, ...tail]); }
+  };
+  walk(t, []);
+  return out;
+}
+const pairKey = (a, b) => a < b ? a + "-" + b : b + "-" + a;
+function shareStr(r){
+  if (Math.abs(r - 1) < 1e-9) return "+1";
+  for (let d = 2; d <= 24; d++){ const n = Math.round(r * d); if (Math.abs(r * d - n) < 1e-9) return `+${n}/${d}`; }
+  return "+" + r.toFixed(2);
+}
+const shareTex = r => { const s = shareStr(r).slice(1); return s.includes("/") ? `\\tfrac{${s.split("/")[0]}}{${s.split("/")[1]}}` : s; };
 
 /* ---------- closeness explorer ---------- */
 const cloPos = [[223,44],[64,100],[226,162],[353,236],[430,120],[526,194],[474,330]];
 const cloEdges = [[0,1],[0,2],[1,2],[2,3],[2,5],[3,4],[3,6],[4,5],[4,6],[5,6]];
 const outerAt = [[0,-30],[-34,-20],[-40,22],[-30,30],[0,-30],[36,-22],[0,36]];
-let cloSel = 2;
-const clo = makeSmall($("cloSvg"), cloPos, cloEdges, i => { cloSel = i; drawClo(); });
+let cloSel = 2, cloTgt = -1;
+const clo = makeSmall($("cloSvg"), cloPos, cloEdges, i => { if (i === cloSel) return; cloSel = i; cloTgt = -1; drawClo(); });
+const cloSP = allPairsSP(clo.g);
 function drawClo(){
-  const g = clo.g, N = g.N, d = bfs(g, cloSel).dist, c = closeness(g).norm;
+  const g = clo.g, N = g.N, s = cloSel, d = cloSP.D[s], c = closeness(g).norm;
+  const paths = cloTgt >= 0 ? listPaths(g, cloSP.D, s, cloTgt) : [];
+  const pe = new Set(), pn = new Set();
+  paths.forEach(p => p.forEach((v, k) => { pn.add(v); if (k) pe.add(pairKey(p[k - 1], v)); }));
   clo.render({
-    inner: i => i === cloSel ? [String(i + 1), "var(--sheet)"] : [String(d[i]), "var(--ink)"],
-    fill: i => i === cloSel ? ["var(--hub)", 1] : ["var(--node)", .12],
-    stroke: i => i === cloSel ? "var(--hub)" : "var(--ink)",
-    outer: i => `${i === cloSel ? "" : "node " + (i + 1) + ", "}k = ${g.deg[i]}`,
+    inner: i => i === s ? [String(i + 1), "#fff"] : [String(d[i]), i === cloTgt ? "#fff" : "var(--ink)"],
+    fill: i => i === s ? ["var(--hub)", 1] : i === cloTgt ? ["var(--path)", 1] : ["var(--node)", .12],
+    stroke: i => i === s ? "var(--hub)" : pn.has(i) ? "var(--path)" : "var(--ink)",
+    strokeW: i => pn.has(i) && i !== s ? 3.5 : 2.5,
+    outer: i => `${i === s ? "" : "node " + (i + 1) + ", "}k = ${g.deg[i]}`,
     outerAt: i => outerAt[i],
-    edgeColor: e => { const [a, b] = cloEdges[e]; return Math.abs(d[a] - d[b]) === 1 ? "var(--ink)" : "var(--muted)"; },
+    edgeColor: e => { const [a, b] = cloEdges[e]; return pe.has(pairKey(a, b)) ? "var(--path)" : Math.abs(d[a] - d[b]) === 1 ? "var(--ink)" : "var(--muted)"; },
+    edgeWidth: e => pe.has(pairKey(...cloEdges[e])) ? 5 : 2,
+    edgeOpacity: e => pe.has(pairKey(...cloEdges[e])) ? 1 : .55,
     aria: i => `Node ${i + 1}, degree ${g.deg[i]}`
   });
-  const terms = []; let sum = 0; for (let j = 0; j < N; j++) if (j !== cloSel){ terms.push(d[j]); sum += d[j]; }
-  $("cloText").innerHTML = `From node ${cloSel + 1}: Σ l = ${terms.join(" + ")} = ${sum}. So g = 1/${sum} = ${(1 / sum).toFixed(3)} and g̃ = ${N - 1}/${sum} = <span class="num">${((N - 1) / sum).toFixed(3)}</span>. On average node ${cloSel + 1} is ${(sum / (N - 1)).toFixed(2)} steps from the rest.`;
+  const terms = []; let sum = 0; for (let j = 0; j < N; j++) if (j !== s){ terms.push(d[j]); sum += d[j]; }
+  const S = s + 1;
+  setMath($("cloText"), String.raw`From node ${S}: \(\sum_{j\neq ${S}} l_{${S}j} = ${terms.join(" + ")} = ${sum}\). So \(g_{${S}} = 1/${sum} = ${(1 / sum).toFixed(3)}\) and \(\tilde g_{${S}} = ${N - 1}/${sum}\) = <span class="num">${((N - 1) / sum).toFixed(3)}</span>. On average node ${S} is ${(sum / (N - 1)).toFixed(2)} steps from the rest.`);
+  $("cloPaths").innerHTML = Array.from({ length: N }, (_, j) => j).filter(j => j !== s).map(j =>
+    `<button type="button" class="chip pick${j === cloTgt ? " on" : ""}" data-t="${j}">to ${j + 1}: ${d[j]} step${d[j] > 1 ? "s" : ""}</button>`).join("");
+  if (cloTgt < 0) setMath($("cloPathText"), "Pick a destination to draw its shortest paths. The edges in dark ink form every shortest path from node " + S + "; muted edges are on none.");
+  else {
+    const T = cloTgt + 1, ps = paths.map(p => p.map(v => v + 1).join(" → "));
+    setMath($("cloPathText"), String.raw`\(l_{${S},${T}} = ${d[cloTgt]}\). ${paths.length === 1 ? "The only shortest path is" : `There are ${paths.length} shortest paths:`} ${ps.join(", ")}. Each one has ${d[cloTgt]} link${d[cloTgt] > 1 ? "s" : ""}, so this term adds ${d[cloTgt]} to the sum.`);
+  }
   const order = Array.from({ length: N }, (_, i) => i).sort((a, b) => c[b] - c[a] || a - b);
-  $("cloChips").innerHTML = order.map(i => `<span class="chip${i === cloSel ? " on" : ""}">node ${i + 1}: ${c[i].toFixed(3)}</span>`).join("");
+  $("cloChips").innerHTML = order.map(i => `<span class="chip${i === s ? " on" : ""}">node ${i + 1}: ${c[i].toFixed(3)}</span>`).join("");
 }
+$("cloPaths").addEventListener("click", e => { const b = e.target.closest("[data-t]"); if (!b) return; const t = +b.dataset.t; cloTgt = cloTgt === t ? -1 : t; drawClo(); const nb = $("cloPaths").querySelector(`[data-t="${t}"]`); if (nb) nb.focus({ preventScroll: true }); });
+$("cloNext").addEventListener("click", () => { const N = clo.g.N; let t = cloTgt; do { t = (t + 1) % N; } while (t === cloSel); cloTgt = t; drawClo(); });
 
 /* ---------- raw vs rescaled closeness ---------- */
 let gScale = null, gToken = 0;
@@ -821,14 +927,14 @@ async function runGScale(){
 }
 function drawGScale(){
   if (!gScale || !gScale.sf.length) return;
-  const xs = { log: true, min: 30, max: 30000, label: "network size N" };
-  plot($("gRawCv"), { x: xs, y: { log: true, min: 1e-6, max: 1, label: "average g" },
+  const xs = { log: true, min: 30, max: 30000, label: "network size *N*" };
+  plot($("gRawCv"), { x: xs, y: { log: true, min: 1e-6, max: 1, label: "average *g*" },
     series: [
       { type: "line", pts: [[30, 1 / 30], [30000, 1 / 30000]], color: "muted", dash: true, width: 1.4 },
       { type: "line", pts: gScale.er.map(p => [p[0], p[1]]), color: "er" }, { type: "dots", pts: gScale.er.map(p => [p[0], p[1]]), color: "er", r: 3.5 },
       { type: "line", pts: gScale.sf.map(p => [p[0], p[1]]), color: "sf" }, { type: "dots", pts: gScale.sf.map(p => [p[0], p[1]]), color: "sf", r: 3.5 }
     ] });
-  plot($("gNormCv"), { x: xs, y: { min: 0, max: 1, label: "average g̃" },
+  plot($("gNormCv"), { x: xs, y: { min: 0, max: 1, label: "average *g̃*" },
     series: [
       { type: "line", pts: gScale.er.map(p => [p[0], p[2]]), color: "er" }, { type: "dots", pts: gScale.er.map(p => [p[0], p[2]]), color: "er", r: 3.5 },
       { type: "line", pts: gScale.sf.map(p => [p[0], p[2]]), color: "sf" }, { type: "dots", pts: gScale.sf.map(p => [p[0], p[2]]), color: "sf", r: 3.5 }
@@ -863,57 +969,138 @@ const btw = (() => {
   const pos = Array.from({ length: N }, (_, i) => [40 + (st.x[i] - x0) / (x1 - x0) * 680, 40 + (st.y[i] - y0) / (y1 - y0) * 360]);
   return { pos, pairs };
 })();
-let bSel = [], bMode = "node";
-const bView = makeSmall($("btwSvg"), btw.pos, btw.pairs, i => {
-  if (bSel.length >= 2 || bSel[0] === i) bSel = [i]; else bSel.push(i);
+let bSel = [], bMode = "node", bPick = "pair", bFocus = -1, bStep = 0, bTimer = 0;
+const bView = makeSmall($("btwSvg"), btw.pos, btw.pairs, i => bClickNode(i), e => bClickEdge(e));
+const bAll = brandes(bView.g, true), bSP = allPairsSP(bView.g);
+let bList = [];
+function bClickNode(i){
+  if (bPick === "pair"){ if (bSel.length >= 2 || bSel[0] === i) bSel = [i]; else bSel.push(i); }
+  else if (bPick === "node"){ if (bFocus === i) return; bFocus = i; bStep = 0; bBuild(); }
   drawBtw();
-});
-const bAll = brandes(bView.g, true);
-function shareStr(r){
-  if (Math.abs(r - 1) < 1e-9) return "+1";
-  for (let d = 2; d <= 24; d++){ const n = Math.round(r * d); if (Math.abs(r * d - n) < 1e-9) return n === 1 && d === 2 ? "+½" : `+${n}/${d}`; }
-  return "+" + r.toFixed(2);
+}
+function bClickEdge(e){ if (bPick !== "edge" || bFocus === e) return; bFocus = e; bStep = 0; bBuild(); drawBtw(); }
+// σ_hj(x)/σ_hj for a node x or a link x, from the all-pairs distances and path counts
+function bShare(h, j, x, kind){
+  const D = bSP.D, S = bSP.S, L = D[h][j];
+  if (kind === "node") return D[h][x] + D[x][j] === L ? S[h][x] * S[x][j] / S[h][j] : 0;
+  const [u, v] = btw.pairs[x];
+  let c = 0;
+  if (D[h][u] + 1 + D[v][j] === L) c += S[h][u] * S[v][j];
+  if (D[h][v] + 1 + D[u][j] === L) c += S[h][v] * S[u][j];
+  return c / S[h][j];
+}
+function bBuild(){
+  bList = []; if (bFocus < 0) return;
+  const N = bView.g.N, zero = $("bZero").checked; let run = 0;
+  for (let h = 0; h < N; h++) for (let j = h + 1; j < N; j++){
+    if (bPick === "node" && (h === bFocus || j === bFocus)) continue;
+    const s = bShare(h, j, bFocus, bPick); run += s;
+    if (s > 0 || zero) bList.push({ h, j, s, run, sig: bSP.S[h][j], L: bSP.D[h][j] });
+  }
+  $("bStep").max = Math.max(0, bList.length - 1);
+  $("bList").innerHTML = `<table><thead><tr><th>Step</th><th>Pair \\(h, j\\)</th><th>Length</th><th>\\(\\sigma_{hj}\\)</th><th>Through it</th><th>Share</th><th>Running total</th></tr></thead><tbody>` +
+    bList.map((r, n) => `<tr data-s="${n}"><td>${n + 1}</td><td>${r.h + 1}, ${r.j + 1}</td><td>${r.L}</td><td>${r.sig}</td><td>${+(r.s * r.sig).toFixed(3)}</td><td>${r.s ? shareStr(r.s).slice(1) : "0"}</td><td>${+r.run.toFixed(3)}</td></tr>`).join("") + `</tbody></table>`;
+  typeset($("bList"));
+}
+function bPair(){
+  if (bPick === "pair") return bSel.length === 2 ? bSel : null;
+  if (bFocus < 0 || !bList.length) return null;
+  const r = bList[Math.min(bStep, bList.length - 1)]; return [r.h, r.j];
 }
 function drawBtw(){
   const g = bView.g, N = g.N, norm = (N - 1) * (N - 2) / 2;
   const bmax = Math.max(...bAll.b), emax = Math.max(...bAll.eb);
-  let onPath = null, share = null, onEdge = null, D = 0, sigma = 0;
-  if (bSel.length === 2){
-    const [j, k] = bSel, A = bfs(g, j), B = bfs(g, k);
-    D = A.dist[k]; sigma = A.sig[k];
+  const pr = bPair();
+  let onPath = null, share = null, onEdge = null, D = 0, sigma = 0, paths = [];
+  if (pr){
+    const [h, j] = pr; D = bSP.D[h][j]; sigma = bSP.S[h][j];
     share = new Float64Array(N); onPath = new Uint8Array(N);
-    for (let i = 0; i < N; i++) if (A.dist[i] + B.dist[i] === D){ onPath[i] = 1; share[i] = A.sig[i] * B.sig[i] / sigma; }
-    onEdge = btw.pairs.map(([a, b]) => (A.dist[a] + 1 + B.dist[b] === D) || (A.dist[b] + 1 + B.dist[a] === D));
+    for (let i = 0; i < N; i++) if (bSP.D[h][i] + bSP.D[i][j] === D){ onPath[i] = 1; share[i] = bSP.S[h][i] * bSP.S[i][j] / sigma; }
+    onEdge = btw.pairs.map((_, e) => bShare(h, j, e, "edge") > 0);
+    paths = listPaths(g, bSP.D, h, j, 12);
   }
+  const nodeFocus = bPick === "node" && bFocus >= 0, edgeFocus = bPick === "edge" && bFocus >= 0;
   const topE = bAll.eb.indexOf(emax);
   bView.render({
-    r: i => bMode === "node" ? 7 + 15 * Math.sqrt(bAll.b[i] / bmax) : 9,
-    fill: i => bSel.includes(i) ? ["var(--path)", 1] : bMode === "node" ? ["var(--node)", .12 + .88 * bAll.b[i] / bmax] : ["var(--node)", .25],
-    stroke: i => bSel.includes(i) || (onPath && onPath[i]) ? "var(--path)" : "var(--ink)",
-    strokeW: i => onPath && onPath[i] ? 3.5 : 2,
-    inner: i => bSel[0] === i ? ["j", "#fff"] : bSel[1] === i ? ["k", "#fff"] : ["", ""],
-    badge: i => onPath && onPath[i] && !bSel.includes(i) ? shareStr(share[i]) : "",
-    edgeColor: e => onEdge && onEdge[e] ? "var(--path)" : bMode === "edge" && e === topE ? "var(--hub)" : "var(--muted)",
-    edgeWidth: e => bMode === "edge" ? 1.5 + 11 * bAll.eb[e] / emax : onEdge && onEdge[e] ? 4 : 2,
-    edgeOpacity: e => onEdge && onEdge[e] ? 1 : bMode === "edge" ? .35 + .65 * bAll.eb[e] / emax : .55,
-    edgeLabel: e => bMode === "edge" && e === topE && !onEdge ? "bottleneck" : "",
+    r: i => bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11,
+    innerSize: i => (bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11) > 15 ? 13 : 10,
+    fill: i => pr && pr.includes(i) ? ["var(--path)", 1] : nodeFocus && i === bFocus ? ["var(--hub)", 1] : bMode === "node" ? ["var(--node)", .12 + .88 * bAll.b[i] / bmax] : ["var(--node)", .25],
+    stroke: i => nodeFocus && i === bFocus ? "var(--hub)" : (pr && pr.includes(i)) || (onPath && onPath[i]) ? "var(--path)" : "var(--ink)",
+    strokeW: i => nodeFocus && i === bFocus ? 4.5 : onPath && onPath[i] ? 3.5 : 2,
+    inner: i => [String(i + 1), (pr && pr.includes(i)) || (nodeFocus && i === bFocus) || (bMode === "node" && bAll.b[i] / bmax > .45) ? "#fff" : "var(--ink)"],
+    outer: i => pr && pr[0] === i ? "h" : pr && pr[1] === i ? "j" : "",
+    outerColor: () => "var(--path)",
+    badge: i => onPath && onPath[i] && !pr.includes(i) ? shareStr(share[i]) : "",
+    badgeColor: i => nodeFocus && i === bFocus ? "var(--hub)" : "var(--path)",
+    edgeHit: bPick === "edge",
+    edgeColor: e => edgeFocus && e === bFocus ? "var(--hub)" : onEdge && onEdge[e] ? "var(--path)" : bMode === "edge" && e === topE && !pr ? "var(--hub)" : "var(--muted)",
+    edgeWidth: e => (edgeFocus && e === bFocus ? 3 : 0) + (bMode === "edge" ? 1.5 + 11 * bAll.eb[e] / emax : onEdge && onEdge[e] ? 4 : 2),
+    edgeOpacity: e => (edgeFocus && e === bFocus) || (onEdge && onEdge[e]) ? 1 : bMode === "edge" ? .35 + .65 * bAll.eb[e] / emax : .55,
+    edgeLabel: e => edgeFocus && e === bFocus && pr ? shareStr(bShare(pr[0], pr[1], e, "edge")) : bMode === "edge" && e === topE && !pr && bPick === "pair" ? "bottleneck" : "",
+    edgeLabelColor: () => "var(--hub)",
+    edgeAria: e => `Link ${btw.pairs[e][0] + 1}–${btw.pairs[e][1] + 1}, edge betweenness ${bAll.eb[e].toFixed(1)}`,
     aria: i => `Node ${i + 1}, betweenness ${bAll.b[i].toFixed(1)}`
   });
+  const pathList = pr ? paths.map(p => p.map(v => v + 1).join("–")).join(", ") + (sigma > paths.length ? ", …" : "") : "";
   let txt;
-  if (bSel.length === 2){
-    const mids = []; for (let i = 0; i < N; i++) if (onPath[i] && !bSel.includes(i)) mids.push(share[i]);
-    txt = D === 1 ? `j and k are neighbors, so no node lies between them and nobody gains.` :
-      `<span class="num">${sigma}</span> shortest path${sigma > 1 ? "s" : ""} of length ${D} join j and k. ${mids.length} node${mids.length > 1 ? "s" : ""} in between share the credit${sigma > 1 ? ": a node on only some of the paths gets that fraction of the point" : ", one point each"}.`;
-  } else if (bMode === "node"){
-    const top = bAll.b.indexOf(bmax);
-    txt = `Summed over all ${norm.toLocaleString("en-US")} pairs, the broker between the groups wins: b = <span class="num">${bmax.toFixed(1)}</span>, so b̃ = ${(bmax / norm).toFixed(2)}, even though it has only ${g.deg[top]} links. ${bSel.length === 1 ? "Now pick k." : "Pick j to start a path."}`;
+  $("bWalk").hidden = bPick === "pair";
+  if (bPick === "pair"){
+    $("bHint").textContent = "Pick two nodes, h and j, to see every shortest path between them.";
+    if (pr){
+      const [h, j] = pr, mids = []; for (let i = 0; i < N; i++) if (onPath[i] && !pr.includes(i)) mids.push(i);
+      txt = D === 1 ? `Nodes ${h + 1} and ${j + 1} are neighbors, so no node lies between them and nobody gains.` :
+        String.raw`\(\sigma_{hj} = ${sigma}\) shortest path${sigma > 1 ? "s" : ""} of length ${D} join ${h + 1} and ${j + 1}: ${pathList}. ` +
+        (sigma > 1 ? "A node on only some of them gets that fraction of the point, which is the share printed next to it." : "Each node in between gets one point.");
+    } else if (bMode === "node"){
+      const top = bAll.b.indexOf(bmax);
+      txt = String.raw`Summed over all ${norm.toLocaleString("en-US")} pairs, the broker between the groups, node ${top + 1}, wins: \(b_{${top + 1}} = ${bmax.toFixed(1)}\), so \(\tilde b_{${top + 1}} = ${(bmax / norm).toFixed(2)}\), even though it has only ${g.deg[top]} links. ${bSel.length === 1 ? "Now pick j." : "Pick h to start a path."}`;
+    } else {
+      txt = `The link that joins the dense group to the rest carries <span class="num">${emax.toFixed(0)}</span> shortest paths. Links like this often join communities, which is why cutting the highest-betweenness links is a way to find them.`;
+    }
   } else {
-    txt = `The link that joins the dense group to the rest carries <span class="num">${emax.toFixed(0)}</span> shortest paths. Links like this often join communities, which is why cutting the highest-betweenness links is a way to find them.`;
+    const kind = bPick === "node" ? "node" : "link";
+    $("bHint").textContent = bPick === "node" ? "Pick the node whose betweenness you want to add up." : "Pick the link whose edge betweenness you want to add up.";
+    if (bFocus < 0) txt = `Pick a ${kind} to list every pair of nodes whose shortest paths run through it.`;
+    else {
+      const name = bPick === "node" ? `node ${bFocus + 1}` : `link ${btw.pairs[bFocus][0] + 1}–${btw.pairs[bFocus][1] + 1}`;
+      const sym = bPick === "node" ? `b_{${bFocus + 1}}` : `b_{(${btw.pairs[bFocus][0] + 1},${btw.pairs[bFocus][1] + 1})}`;
+      const total = bPick === "node" ? bAll.b[bFocus] : bAll.eb[bFocus];
+      const nz = bList.filter(r => r.s > 0).length;
+      if (!bList.length) txt = String.raw`No shortest path between two other nodes passes through ${name}, so \(${sym} = 0\).`;
+      else {
+        const r = bList[Math.min(bStep, bList.length - 1)], thr = +(r.s * r.sig).toFixed(3);
+        txt = String.raw`Pair ${bStep + 1} of ${bList.length}: \(h = ${r.h + 1},\ j = ${r.j + 1}\). Of the \(\sigma_{hj} = ${r.sig}\) shortest path${r.sig > 1 ? "s" : ""} (length ${r.L}), ${thr} pass${thr === 1 ? "es" : ""} through ${name}, adding \(${r.s ? shareTex(r.s) : "0"}\). Running total <span class="num">${+r.run.toFixed(2)}</span> of \(${sym} = ${+total.toFixed(2)}\), from ${nz} pairs.`;
+      }
+      $("bStepOut").textContent = bList.length ? `${bStep + 1} of ${bList.length}` : "none";
+      $("bStep").value = bStep;
+      const box = $("bList"), row = box.querySelector(`tr[data-s="${bStep}"]`);
+      box.querySelectorAll("tr.on").forEach(t => t.classList.remove("on"));
+      if (row){ row.classList.add("on"); const top = row.offsetTop - box.clientHeight / 2; box.scrollTop = Math.max(0, top); }
+    }
   }
-  $("btwText").innerHTML = txt;
+  setMath($("btwText"), txt);
 }
+function bStop(){ clearInterval(bTimer); bTimer = 0; $("bPlay").textContent = "Play"; }
+function bGo(n){ if (!bList.length) return; bStep = Math.max(0, Math.min(bList.length - 1, n)); drawBtw(); }
 document.querySelectorAll('input[name="bmode"]').forEach(r => r.addEventListener("change", e => { bMode = e.target.value; drawBtw(); }));
-$("bClear").addEventListener("click", () => { bSel = []; drawBtw(); });
+document.querySelectorAll('input[name="bpick"]').forEach(r => r.addEventListener("change", e => {
+  bStop(); bPick = e.target.value; bFocus = -1; bSel = []; bList = []; bStep = 0;
+  if (bPick !== "pair"){ bMode = bPick; document.querySelector(`input[name="bmode"][value="${bMode}"]`).checked = true; }
+  $("bList").innerHTML = ""; drawBtw();
+}));
+$("bClear").addEventListener("click", () => { bStop(); bSel = []; bFocus = -1; bList = []; $("bList").innerHTML = ""; drawBtw(); });
+$("bPrev").addEventListener("click", () => { bStop(); bGo(bStep - 1); });
+$("bNext").addEventListener("click", () => { bStop(); bGo(bStep + 1); });
+$("bStep").addEventListener("input", e => { bStop(); bGo(+e.target.value); });
+$("bZero").addEventListener("change", () => { bStop(); bStep = 0; bBuild(); drawBtw(); });
+$("bList").addEventListener("click", e => { const t = e.target.closest("tr[data-s]"); if (t){ bStop(); bGo(+t.dataset.s); } });
+$("bPlay").addEventListener("click", () => {
+  if (bTimer){ bStop(); return; }
+  if (!bList.length) return;
+  if (bStep >= bList.length - 1) bStep = -1;
+  $("bPlay").textContent = "Pause";
+  bTimer = setInterval(() => { if (bStep >= bList.length - 1){ bStop(); return; } bGo(bStep + 1); }, 700);
+});
 
 /* ---------- Fig 3.1 pair ---------- */
 function figure(svgId, textId, pos, edges, labels, hl){
@@ -923,8 +1110,8 @@ function figure(svgId, textId, pos, edges, labels, hl){
   function draw(){
     v.render({ r: () => 14, fill: i => i === hl ? ["var(--path)", 1] : ["var(--sf)", .85], stroke: i => i === sel ? "var(--ink)" : i === hl ? "var(--path)" : "var(--sf)", strokeW: i => i === sel ? 4 : 2,
       inner: i => [labels[i], "#fff"], edgeColor: () => "var(--ink)", edgeOpacity: () => .7, aria: i => labels[i] ? `Node ${labels[i]}` : "Unlabeled node" });
-    const sub = labels[sel] ? `<sub>${labels[sel]}</sub>` : "";
-    $(textId).innerHTML = `${labels[sel] ? "" : "This node: "}k${sub} = ${v.g.deg[sel]}, b${sub} = <span class="num">${+bb[sel].toFixed(2)}</span>`;
+    const sub = labels[sel] ? `_{${labels[sel]}}` : "";
+    setMath($(textId), `${labels[sel] ? "" : "This node: "}\\(k${sub} = ${v.g.deg[sel]},\\quad b${sub} = ${+bb[sel].toFixed(2)}\\)`);
   }
   draw();
 }
@@ -959,8 +1146,8 @@ function drawCorr(){
   const kmax = Math.max(...g.deg), bmax = Math.max(...b);
   const rho = spearman(Array.from(g.deg), Array.from(b));
   plot($("corrCv"), {
-    x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(kmax * 1.05))), label: "degree k" },
-    y: { log: true, min: Math.pow(10, Math.floor(Math.log10(Math.min(...pts.map(p => p[1]))))), max: Math.pow(10, Math.ceil(Math.log10(bmax))), label: "betweenness b" },
+    x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(kmax * 1.05))), label: "degree *k*" },
+    y: { log: true, min: Math.pow(10, Math.floor(Math.log10(Math.min(...pts.map(p => p[1]))))), max: Math.pow(10, Math.ceil(Math.log10(bmax))), label: "betweenness *b*" },
     series: [
       { type: "dots", pts: pts.map(([k, v]) => [k * (1 + (Math.random() - .5) * .12), v]), color: "node", r: 2.6, alpha: .35 },
       { type: "line", pts: avg, color: "ink", width: 2 },
@@ -968,9 +1155,9 @@ function drawCorr(){
     ]
   });
   const top = Array.from(b).indexOf(bmax), topRank = ranksOf(Array.from(g.deg)).rank[top];
-  $("corrText").innerHTML = `Rank correlation between degree and betweenness: ρ = <span class="num">${rho.toFixed(2)}</span>. ` +
+  setMath($("corrText"), `Rank correlation between degree and betweenness: Spearman \\(\\rho\\) = <span class="num">${rho.toFixed(2)}</span>. ` +
     (odd.length ? `${odd.length} node${odd.length > 1 ? "s" : ""} with at most the median degree (${kmed}) still reach the top 1% of betweenness.` : `No node with median degree (${kmed}) or less reaches the top 1% of betweenness.`) +
-    ` The highest-betweenness node ranks ${topRank === 1 ? "first" : "#" + topRank} by degree.`;
+    ` The highest-betweenness node ranks ${topRank === 1 ? "first" : "#" + topRank} by degree.`);
 }
 $("corrNet").addEventListener("change", runCorr);
 
@@ -987,14 +1174,14 @@ function drawHist(){
   $("histTitle").textContent = `Histogram of ${MEASURES[m].split(" ")[0].toLowerCase()} for the network at the top`;
   plot($("histCv"), {
     pad: { r: 60 },
-    x: { min: bins[0][0], max: bins[bins.length - 1][1], label: sym, fmt: m === "deg" ? undefined : (x => +x.toFixed(3) + "") },
-    y: { min: 0, max: nmax * 1.1, label: "count n" },
+    x: { min: bins[0][0], max: bins[bins.length - 1][1], label: "*" + sym + "*", fmt: m === "deg" ? undefined : (x => +x.toFixed(3) + "") },
+    y: { min: 0, max: nmax * 1.1, label: "count *n*" },
     series: [{ type: "bars", pts: bins, color: m === "btw" ? "path" : "node" }],
     after: (ctx, X, Y, w, h, pad) => {
       const st = niceStep(nmax * 1.1 / N, 4);
       ctx.fillStyle = C.muted; ctx.font = "12px " + bodyFont(); ctx.textAlign = "left"; ctx.textBaseline = "middle";
       for (let f = 0; f <= nmax * 1.1 / N + 1e-9; f += st) ctx.fillText(+f.toFixed(3) + "", w - pad.r + 6, Y(f * N));
-      ctx.save(); ctx.translate(w - 10, (pad.t + h - pad.b) / 2); ctx.rotate(Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = C.ink; ctx.font = "italic 14px 'Times New Roman', serif"; ctx.fillText("fraction f", 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(w - 10, (pad.t + h - pad.b) / 2); ctx.rotate(Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = C.ink; ctx.textBaseline = "middle"; richText(ctx, "fraction *f*", 0, 0); ctx.restore();
     }
   });
 }
@@ -1005,8 +1192,8 @@ function drawScales(){
   const kmax = s === "log" ? 100 : 8, ex = [], pl = [];
   for (let i = 0; i <= 400; i++){ const k = s === "log" ? Math.pow(10, i / 200) : 1 + (kmax - 1) * i / 400; ex.push([k, Math.exp(-k)]); pl.push([k, 0.5 * Math.pow(k, -3)]); }
   plot($("scaleCv"), {
-    x: s === "log" ? { log: true, min: 1, max: 100, label: "k" } : { min: 1, max: 8, label: "k" },
-    y: s === "lin" ? { min: 0, max: 0.5, label: "p(k)", fmt: v => +v.toFixed(2) + "" } : { log: true, min: s === "log" ? 1e-6 : 1e-4, max: 1, label: "p(k)" },
+    x: s === "log" ? { log: true, min: 1, max: 100, label: "*k*" } : { min: 1, max: 8, label: "*k*" },
+    y: s === "lin" ? { min: 0, max: 0.5, label: "*p*(*k*)", fmt: v => +v.toFixed(2) + "" } : { log: true, min: s === "log" ? 1e-6 : 1e-4, max: 1, label: "*p*(*k*)" },
     series: [{ type: "line", pts: ex, color: "er", width: 2.6 }, { type: "line", pts: pl, color: "sf", width: 2.6 }]
   });
 }
@@ -1043,9 +1230,9 @@ function drawCum(){
     { type: "line", pts: ccdf(cum.er.deg), color: "er" }, { type: "line", pts: ccdf(cum.sf.deg), color: "sf" }
   ];
   if (raw) series.push({ type: "dots", pts: pk(Array.from(cum.er.deg)), color: "er", r: 2.8, shape: "diamond", alpha: .8 }, { type: "dots", pts: pk(Array.from(cum.sf.deg)), color: "sf", r: 2.6, alpha: .7 });
-  plot($("cumDeg"), { x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(kmax * 1.05))), label: "k" }, y: { log: true, min: Math.pow(10, -Math.ceil(Math.log10(cum.sf.N))), max: 1, label: "P(k)" }, series });
+  plot($("cumDeg"), { x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(kmax * 1.05))), label: "*k*" }, y: { log: true, min: Math.pow(10, -Math.ceil(Math.log10(cum.sf.N))), max: 1, label: "*P*(*k*)" }, series });
   const bmax = Math.max(...cum.bs);
-  plot($("cumBtw"), { x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(bmax))), label: "b" }, y: { log: true, min: Math.pow(10, -Math.ceil(Math.log10(cum.sf.N))), max: 1, label: "P(b)" },
+  plot($("cumBtw"), { x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(bmax))), label: "*b*" }, y: { log: true, min: Math.pow(10, -Math.ceil(Math.log10(cum.sf.N))), max: 1, label: "*P*(*b*)" },
     series: [{ type: "line", pts: ccdf(cum.be), color: "er" }, { type: "line", pts: ccdf(cum.bs), color: "sf" }] });
 }
 $("cumN").addEventListener("change", runCum);
@@ -1087,8 +1274,8 @@ function drawKappa(){
   if (!kap) return;
   const all = [...kap.er, ...kap.sf, ...kap.pl].map(p => p[1]);
   plot($("kapCv"), {
-    x: { log: true, min: 100, max: 100000, label: "network size N" },
-    y: { log: true, min: 1, max: Math.max(100, Math.pow(10, Math.ceil(Math.log10(Math.max(...all))))), label: "κ = ⟨k²⟩ / ⟨k⟩²" },
+    x: { log: true, min: 100, max: 100000, label: "network size *N*" },
+    y: { log: true, min: 1, max: Math.max(100, Math.pow(10, Math.ceil(Math.log10(Math.max(...all))))), label: "*κ* = ⟨*k*²⟩ / ⟨*k*⟩²" },
     series: [
       { type: "line", pts: kap.er, color: "er" }, { type: "dots", pts: kap.er, color: "er", r: 3.5 },
       { type: "line", pts: kap.sf, color: "sf" }, { type: "dots", pts: kap.sf, color: "sf", r: 3.5 },
@@ -1128,6 +1315,22 @@ const io = new IntersectionObserver(entries => {
   });
 }, { rootMargin: "200px" });
 lazy.forEach(l => io.observe(l[0]));
+})();
+</script>
+<script>if (window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], throwOnError: false, fleqn: true });</script>
+<script>
+(() => {
+  // light/dark switch; the choice is remembered across all of the course demos
+  const btn = document.getElementById("themeBtn"), root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+  const current = () => root.dataset.theme || (mq.matches ? "dark" : "light");
+  const sync = () => { const dark = current() === "dark", label = dark ? "Switch to light mode" : "Switch to dark mode";
+    btn.innerHTML = dark ? SUN : MOON; btn.setAttribute("aria-label", label); btn.title = label; };
+  btn.addEventListener("click", () => { const next = current() === "dark" ? "light" : "dark"; root.dataset.theme = next;
+    try { localStorage.setItem("netsci-theme", next); } catch (e) {} sync(); });
+  mq.addEventListener("change", sync);
+  sync();
 })();
 </script>
 </body>
