@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Network Centrality: An Interactive Demo</title>
+<title>Network centrality · 네트워크 중심도 | Network Science demos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -151,13 +151,22 @@ button.theme-btn:hover{background:var(--sheet, var(--paper)); color:var(--ink); 
 button.theme-btn:focus-visible{outline:3px solid var(--focus, var(--node)); outline-offset:2px}
 button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@600&family=Noto+Serif+KR:wght@400&display=swap" rel="stylesheet">
+<style>
+/* Course-wide demo title: the same on every demo page and on the course landing page */
+h1.course-title{font-family:"STIX Two Text","Noto Serif KR",Cambria,"Times New Roman",serif !important;font-weight:600 !important;font-style:normal !important;font-size:clamp(30px,3.6vw,44px) !important;line-height:1.08 !important;letter-spacing:-.01em !important;text-transform:none !important;color:var(--ink) !important;word-break:keep-all}
+h1.course-title .course-title-ko{display:block;font-family:"Noto Serif KR","STIX Two Text",serif;font-weight:400;font-size:.5em;line-height:1.3;letter-spacing:0;color:var(--muted);margin:.3em 0 0}
+/* space above the title, so it starts about 48px (phones: 32px) below the top of the page */
+h1.course-title{margin-top:48px !important}
+@media (max-width:700px){h1.course-title{margin-top:32px !important}}
+</style>
 </head>
 <body>
 <button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
 <div class="tip" id="tip"></div>
 
 <header class="wrap">
-  <h1>Network centrality</h1>
+  <h1 class="course-title">Network centrality<span class="course-title-ko" lang="ko">네트워크 중심도</span></h1>
   <p class="credit">Created by Claude Opus 5.5, based on the lecture slides by Sang Hoon Lee.</p>
   <p class="lede" style="margin-top:18px">A hub is “a center around which other things revolve”. But which node is the center? Count its links, measure how close it sits to everyone else, or count the shortest paths that run through it. Pick a network and a measure and see who comes out on top.</p>
 
