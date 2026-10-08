@@ -131,6 +131,15 @@ code{font-size:14px; background:var(--grid-minor); padding:1px 5px; border-radiu
 footer{padding:48px 0 64px; font-size:14px; color:var(--muted)}
 footer p{max-width:80ch}
 .status{font-size:13px; color:var(--muted); min-height:1.4em}
+.pathbar{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; min-height:2.4em; font-size:15px; margin:0 0 6px; color:var(--ink)}
+.pathbar .muted{color:var(--muted)}
+.pathbar .hj{display:inline-block; background:var(--path); color:#fff; border-radius:999px; padding:0 10px; font-weight:600}
+.pathbar .chips{margin-top:0; gap:6px}
+.pathbar button.chip{font-size:14px; padding:2px 11px}
+.pathbar button.chip.on{background:var(--path); border-color:var(--path); color:#fff}
+.multi{color:var(--path); font-weight:700}
+.pairlist td.multi{font-weight:600}
+#btwSvg [data-n]:hover circle.hit{fill:var(--path) !important; fill-opacity:.22}
 @media (prefers-reduced-motion: reduce){ .tip{transition:none} }
 </style>
 <script>try { const t = localStorage.getItem("netsci-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
@@ -256,6 +265,7 @@ button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; st
     <button id="bClear" type="button">Clear</button>
   </div>
   <div class="sheet">
+    <div class="pathbar" id="bPaths" aria-live="polite"></div>
     <div class="scroll"><svg class="graph" id="btwSvg" viewBox="0 0 760 440" role="group" aria-label="Network with a bottleneck, for betweenness"></svg></div>
     <div class="legend">
       <span id="bHint">Pick two nodes, h and j, to see every shortest path between them.</span>
@@ -819,7 +829,7 @@ function makeSmall(svg, pos, edgeList, onPick, onEdge){
     svg.textContent = "";
     const eg = svgEl("g", {}, svg);
     edgeList.forEach(([a, b], e) => {
-      svgEl("line", { x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: `stroke:${o.edgeColor ? o.edgeColor(e) : "var(--muted)"};stroke-width:${o.edgeWidth ? o.edgeWidth(e) : 2};stroke-linecap:round;stroke-opacity:${o.edgeOpacity ? o.edgeOpacity(e) : .55}` }, eg);
+      svgEl("line", { x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: `stroke:${o.edgeColor ? o.edgeColor(e) : "var(--muted)"};stroke-width:${o.edgeWidth ? o.edgeWidth(e) : 2};stroke-linecap:round;stroke-opacity:${o.edgeOpacity ? o.edgeOpacity(e) : .55}${o.edgeDash && o.edgeDash(e) ? ";stroke-dasharray:6 6" : ""}` }, eg);
     });
     if (o.edgeHit) edgeList.forEach(([a, b], e) => {
       svgEl("line", { "data-e": e, tabindex: 0, role: "button", "aria-label": o.edgeAria ? o.edgeAria(e) : `Link ${a + 1}–${b + 1}`, class: "hit", x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: "stroke:transparent;stroke-width:14;cursor:pointer" }, eg);
@@ -830,7 +840,8 @@ function makeSmall(svg, pos, edgeList, onPick, onEdge){
     for (let i = 0; i < N; i++){
       const r = o.r ? o.r(i) : 18;
       const ng = svgEl("g", { "data-n": i, tabindex: 0, role: "button", "aria-label": o.aria ? o.aria(i) : `Node ${i + 1}` }, svg);
-      svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r + 6, style: "fill:transparent" }, ng);
+      svgEl("circle", { class: "hit", cx: pos[i][0], cy: pos[i][1], r: r + 6, style: "fill:transparent" }, ng);
+      if (o.halo){ const hc = o.halo(i); if (hc) svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r + 6, style: `fill:none;stroke:${hc};stroke-width:3.5;stroke-opacity:.6;pointer-events:none` }, ng); }
       svgEl("circle", { class: "body", cx: pos[i][0], cy: pos[i][1], r, style: `fill:var(--sheet);stroke:${o.stroke ? o.stroke(i) : "var(--ink)"};stroke-width:${o.strokeW ? o.strokeW(i) : 2.5}` }, ng);
       if (o.fill){ const [col, op] = o.fill(i); svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r - 1, style: `fill:${col};fill-opacity:${op};pointer-events:none` }, ng); }
       if (o.inner){ const [t, col] = o.inner(i); if (t !== ""){ const fs = o.innerSize ? o.innerSize(i) : r > 14 ? 16 : 12; const tx = svgEl("text", { x: pos[i][0], y: pos[i][1] + 1, "text-anchor": "middle", "dominant-baseline": "middle", style: `fill:${col || "var(--ink)"};font:600 ${fs}px var(--body);pointer-events:none` }, ng); tx.textContent = t; } }
@@ -969,12 +980,12 @@ const btw = (() => {
   const pos = Array.from({ length: N }, (_, i) => [40 + (st.x[i] - x0) / (x1 - x0) * 680, 40 + (st.y[i] - y0) / (y1 - y0) * 360]);
   return { pos, pairs };
 })();
-let bSel = [], bMode = "node", bPick = "pair", bFocus = -1, bStep = 0, bTimer = 0;
+let bSel = [], bMode = "node", bPick = "pair", bFocus = -1, bStep = 0, bTimer = 0, bPathIdx = -1, bPathKey = "";
 const bView = makeSmall($("btwSvg"), btw.pos, btw.pairs, i => bClickNode(i), e => bClickEdge(e));
 const bAll = brandes(bView.g, true), bSP = allPairsSP(bView.g);
 let bList = [];
 function bClickNode(i){
-  if (bPick === "pair"){ if (bSel.length >= 2 || bSel[0] === i) bSel = [i]; else bSel.push(i); }
+  if (bPick === "pair"){ if (bSel.length === 1 && bSel[0] === i) bSel = []; else if (bSel.length >= 2) bSel = [i]; else bSel.push(i); }
   else if (bPick === "node"){ if (bFocus === i) return; bFocus = i; bStep = 0; bBuild(); }
   drawBtw();
 }
@@ -999,7 +1010,7 @@ function bBuild(){
   }
   $("bStep").max = Math.max(0, bList.length - 1);
   $("bList").innerHTML = `<table><thead><tr><th>Step</th><th>Pair \\(h, j\\)</th><th>Length</th><th>\\(\\sigma_{hj}\\)</th><th>Through it</th><th>Share</th><th>Running total</th></tr></thead><tbody>` +
-    bList.map((r, n) => `<tr data-s="${n}"><td>${n + 1}</td><td>${r.h + 1}, ${r.j + 1}</td><td>${r.L}</td><td>${r.sig}</td><td>${+(r.s * r.sig).toFixed(3)}</td><td>${r.s ? shareStr(r.s).slice(1) : "0"}</td><td>${+r.run.toFixed(3)}</td></tr>`).join("") + `</tbody></table>`;
+    bList.map((r, n) => `<tr data-s="${n}"><td>${n + 1}</td><td>${r.h + 1}, ${r.j + 1}</td><td>${r.L}</td><td${r.sig > 1 ? ' class="multi" title="Several tied shortest paths"' : ""}>${r.sig}</td><td>${+(r.s * r.sig).toFixed(3)}</td><td>${r.s ? shareStr(r.s).slice(1) : "0"}</td><td>${+r.run.toFixed(3)}</td></tr>`).join("") + `</tbody></table>`;
   typeset($("bList"));
 }
 function bPair(){
@@ -1019,28 +1030,39 @@ function drawBtw(){
     onEdge = btw.pairs.map((_, e) => bShare(h, j, e, "edge") > 0);
     paths = listPaths(g, bSP.D, h, j, 12);
   }
+  const key = pr ? pr.join("-") : "";
+  if (key !== bPathKey){ bPathKey = key; bPathIdx = -1; }
+  if (bPathIdx >= paths.length) bPathIdx = -1;
+  const soloP = pr && sigma > 1 && bPathIdx >= 0 ? paths[bPathIdx] : null;
+  const soloE = soloP ? new Set(soloP.slice(1).map((v, k) => pairKey(soloP[k], v))) : null;
+  const inSolo = e => soloE && soloE.has(pairKey(...btw.pairs[e]));
+  const hj = pr || (bPick === "pair" ? bSel : []);
   const nodeFocus = bPick === "node" && bFocus >= 0, edgeFocus = bPick === "edge" && bFocus >= 0;
   const topE = bAll.eb.indexOf(emax);
   bView.render({
     r: i => bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11,
     innerSize: i => (bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11) > 15 ? 13 : 10,
-    fill: i => pr && pr.includes(i) ? ["var(--path)", 1] : nodeFocus && i === bFocus ? ["var(--hub)", 1] : bMode === "node" ? ["var(--node)", .12 + .88 * bAll.b[i] / bmax] : ["var(--node)", .25],
-    stroke: i => nodeFocus && i === bFocus ? "var(--hub)" : (pr && pr.includes(i)) || (onPath && onPath[i]) ? "var(--path)" : "var(--ink)",
-    strokeW: i => nodeFocus && i === bFocus ? 4.5 : onPath && onPath[i] ? 3.5 : 2,
-    inner: i => [String(i + 1), (pr && pr.includes(i)) || (nodeFocus && i === bFocus) || (bMode === "node" && bAll.b[i] / bmax > .45) ? "#fff" : "var(--ink)"],
-    outer: i => pr && pr[0] === i ? "h" : pr && pr[1] === i ? "j" : "",
+    fill: i => hj.includes(i) ? ["var(--path)", 1] : nodeFocus && i === bFocus ? ["var(--hub)", 1] : bMode === "node" ? ["var(--node)", .12 + .88 * bAll.b[i] / bmax] : ["var(--node)", .25],
+    stroke: i => nodeFocus && i === bFocus ? "var(--hub)" : hj.includes(i) || (onPath && onPath[i]) ? "var(--path)" : "var(--ink)",
+    strokeW: i => nodeFocus && i === bFocus ? 4.5 : hj.includes(i) ? 3.5 : onPath && onPath[i] ? (soloP && !soloP.includes(i) ? 2 : 3.5) : 2,
+    halo: i => hj.includes(i) ? "var(--path)" : nodeFocus && i === bFocus ? "var(--hub)" : null,
+    inner: i => [String(i + 1), hj.includes(i) || (nodeFocus && i === bFocus) || (bMode === "node" && bAll.b[i] / bmax > .45) ? "#fff" : "var(--ink)"],
+    outer: i => hj[0] === i ? "h" : hj[1] === i ? "j" : "",
+    outerAt: i => { const r = bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11; return [0, -r - 12]; },
     outerColor: () => "var(--path)",
     badge: i => onPath && onPath[i] && !pr.includes(i) ? shareStr(share[i]) : "",
     badgeColor: i => nodeFocus && i === bFocus ? "var(--hub)" : "var(--path)",
     edgeHit: bPick === "edge",
     edgeColor: e => edgeFocus && e === bFocus ? "var(--hub)" : onEdge && onEdge[e] ? "var(--path)" : bMode === "edge" && e === topE && !pr ? "var(--hub)" : "var(--muted)",
-    edgeWidth: e => (edgeFocus && e === bFocus ? 3 : 0) + (bMode === "edge" ? 1.5 + 11 * bAll.eb[e] / emax : onEdge && onEdge[e] ? 4 : 2),
-    edgeOpacity: e => (edgeFocus && e === bFocus) || (onEdge && onEdge[e]) ? 1 : bMode === "edge" ? .35 + .65 * bAll.eb[e] / emax : .55,
+    edgeWidth: e => (edgeFocus && e === bFocus ? 3 : 0) + (inSolo(e) ? 2 : 0) + (bMode === "edge" ? 1.5 + 11 * bAll.eb[e] / emax : onEdge && onEdge[e] ? 4 : 2),
+    edgeOpacity: e => (edgeFocus && e === bFocus) || inSolo(e) ? 1 : onEdge && onEdge[e] ? (soloE ? .4 : 1) : bMode === "edge" ? .35 + .65 * bAll.eb[e] / emax : .55,
+    edgeDash: e => soloE && onEdge && onEdge[e] && !inSolo(e) && !(edgeFocus && e === bFocus),
     edgeLabel: e => edgeFocus && e === bFocus && pr ? shareStr(bShare(pr[0], pr[1], e, "edge")) : bMode === "edge" && e === topE && !pr && bPick === "pair" ? "bottleneck" : "",
     edgeLabelColor: () => "var(--hub)",
     edgeAria: e => `Link ${btw.pairs[e][0] + 1}–${btw.pairs[e][1] + 1}, edge betweenness ${bAll.eb[e].toFixed(1)}`,
-    aria: i => `Node ${i + 1}, betweenness ${bAll.b[i].toFixed(1)}`
+    aria: i => `Node ${i + 1}, betweenness ${bAll.b[i].toFixed(1)}${hj[0] === i ? ", selected as h" : hj[1] === i ? ", selected as j" : ""}`
   });
+  bPathbar(pr, D, sigma, paths);
   const pathList = pr ? paths.map(p => p.map(v => v + 1).join("–")).join(", ") + (sigma > paths.length ? ", …" : "") : "";
   let txt;
   $("bWalk").hidden = bPick === "pair";
@@ -1049,11 +1071,12 @@ function drawBtw(){
     if (pr){
       const [h, j] = pr, mids = []; for (let i = 0; i < N; i++) if (onPath[i] && !pr.includes(i)) mids.push(i);
       txt = D === 1 ? `Nodes ${h + 1} and ${j + 1} are neighbors, so no node lies between them and nobody gains.` :
-        String.raw`\(\sigma_{hj} = ${sigma}\) shortest path${sigma > 1 ? "s" : ""} of length ${D} join ${h + 1} and ${j + 1}: ${pathList}. ` +
-        (sigma > 1 ? "A node on only some of them gets that fraction of the point, which is the share printed next to it." : "Each node in between gets one point.");
+        (sigma > 1
+          ? String.raw`<span class="multi">${sigma} tied shortest paths</span> of length ${D} join ${h + 1} and ${j + 1}, so \(\sigma_{hj} = ${sigma}\): ${pathList}. Each path carries \(1/${sigma}\) of the point, so a node on only some of them gets that fraction, printed next to it.`
+          : String.raw`Exactly one shortest path, of length ${D}, joins ${h + 1} and ${j + 1}, so \(\sigma_{hj} = 1\): ${pathList}. Each node in between gets one whole point.`);
     } else if (bMode === "node"){
       const top = bAll.b.indexOf(bmax);
-      txt = String.raw`Summed over all ${norm.toLocaleString("en-US")} pairs, the broker between the groups, node ${top + 1}, wins: \(b_{${top + 1}} = ${bmax.toFixed(1)}\), so \(\tilde b_{${top + 1}} = ${(bmax / norm).toFixed(2)}\), even though it has only ${g.deg[top]} links. ${bSel.length === 1 ? "Now pick j." : "Pick h to start a path."}`;
+      txt = String.raw`Summed over all ${norm.toLocaleString("en-US")} pairs, the broker between the groups, node ${top + 1}, wins: \(b_{${top + 1}} = ${bmax.toFixed(1)}\), so \(\tilde b_{${top + 1}} = ${(bmax / norm).toFixed(2)}\), even though it has only ${g.deg[top]} links. ${bSel.length === 1 ? `Node ${bSel[0] + 1} is h; now pick j.` : "Pick h to start a path."}`;
     } else {
       txt = `The link that joins the dense group to the rest carries <span class="num">${emax.toFixed(0)}</span> shortest paths. Links like this often join communities, which is why cutting the highest-betweenness links is a way to find them.`;
     }
@@ -1069,7 +1092,10 @@ function drawBtw(){
       if (!bList.length) txt = String.raw`No shortest path between two other nodes passes through ${name}, so \(${sym} = 0\).`;
       else {
         const r = bList[Math.min(bStep, bList.length - 1)], thr = +(r.s * r.sig).toFixed(3);
-        txt = String.raw`Pair ${bStep + 1} of ${bList.length}: \(h = ${r.h + 1},\ j = ${r.j + 1}\). Of the \(\sigma_{hj} = ${r.sig}\) shortest path${r.sig > 1 ? "s" : ""} (length ${r.L}), ${thr} pass${thr === 1 ? "es" : ""} through ${name}, adding \(${r.s ? shareTex(r.s) : "0"}\). Running total <span class="num">${+r.run.toFixed(2)}</span> of \(${sym} = ${+total.toFixed(2)}\), from ${nz} pairs.`;
+        const how = r.sig > 1
+          ? String.raw`There are <span class="multi">${r.sig} tied shortest paths</span> (\(\sigma_{hj} = ${r.sig}\), length ${r.L}), and ${thr} of them pass${thr === 1 ? "es" : ""} through ${name}`
+          : String.raw`There is a single shortest path (\(\sigma_{hj} = 1\), length ${r.L}), and it ${thr ? "passes" : "does not pass"} through ${name}`;
+        txt = String.raw`Pair ${bStep + 1} of ${bList.length}: \(h = ${r.h + 1},\ j = ${r.j + 1}\). ${how}, adding \(${r.s ? shareTex(r.s) : "0"}\). Running total <span class="num">${+r.run.toFixed(2)}</span> of \(${sym} = ${+total.toFixed(2)}\), from ${nz} pairs.`;
       }
       $("bStepOut").textContent = bList.length ? `${bStep + 1} of ${bList.length}` : "none";
       $("bStep").value = bStep;
@@ -1080,6 +1106,22 @@ function drawBtw(){
   }
   setMath($("btwText"), txt);
 }
+function bPathbar(pr, D, sigma, paths){
+  const bar = $("bPaths"), pill = (t, v) => `<span class="hj">${t} = ${v + 1}</span>`;
+  if (!pr){
+    bar.innerHTML = bPick !== "pair" ? "" : bSel.length === 1
+      ? `${pill("h", bSel[0])} <span>Now pick j.</span> <span class="muted">Click ${bSel[0] + 1} again to undo.</span>`
+      : `<span class="muted">Click a node to choose h.</span>`;
+    return;
+  }
+  const [h, j] = pr, ends = `${pill("h", h)} ${pill("j", j)}`;
+  if (D === 1){ bar.innerHTML = `${ends} <span>Neighbors: one shortest path, nobody in between.</span>`; return; }
+  if (sigma === 1){ bar.innerHTML = `${ends} <span><b>One shortest path</b>, length ${D}: ${paths[0].map(v => v + 1).join("–")}</span>`; return; }
+  const chip = (p, t) => `<button type="button" class="chip pick${bPathIdx === p ? " on" : ""}" data-p="${p}" aria-pressed="${bPathIdx === p}">${t}</button>`;
+  bar.innerHTML = `${ends} <span class="multi">${sigma} shortest paths</span><span>of length ${D}, tied.${sigma > paths.length ? ` First ${paths.length} shown.` : ""} Show:</span>` +
+    `<span class="chips">${chip(-1, "All")}${paths.map((p, k) => chip(k, p.map(v => v + 1).join("–"))).join("")}</span>`;
+}
+$("bPaths").addEventListener("click", e => { const b = e.target.closest("button[data-p]"); if (!b) return; bPathIdx = +b.dataset.p; drawBtw(); const nb = $("bPaths").querySelector(`button[data-p="${bPathIdx}"]`); if (nb) nb.focus(); });
 function bStop(){ clearInterval(bTimer); bTimer = 0; $("bPlay").textContent = "Play"; }
 function bGo(n){ if (!bList.length) return; bStep = Math.max(0, Math.min(bList.length - 1, n)); drawBtw(); }
 document.querySelectorAll('input[name="bmode"]').forEach(r => r.addEventListener("change", e => { bMode = e.target.value; drawBtw(); }));
