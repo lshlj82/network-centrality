@@ -13,7 +13,7 @@
 <style>
 :root{
   --paper:#EDF2F5; --sheet:#F9FBFC; --ink:#1B2A3A; --muted:#566676; --grid:#D2DDE5; --grid-minor:#E3EAF0;
-  --er:#2F8A4C; --sf:#6A3D9E; --hub:#D21F3C; --node:#2C5F8E; --path:#C8700A; --edge:rgba(27,42,58,.22); --focus:#1F6FB2;
+  --er:#24733D; --sf:#6A3D9E; --hub:#D21F3C; --node:#2C5F8E; --path:#A65B00; --edge:rgba(27,42,58,.22); --focus:#1F6FB2;
   --display:"Source Serif 4",Georgia,"Times New Roman",serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   box-sizing:border-box;
@@ -288,7 +288,7 @@ h1.course-title{margin-top:48px !important}
       <button id="bPrev" type="button">Previous pair</button>
       <button id="bNext" type="button">Next pair</button>
       <button id="bPlay" type="button">Play</button>
-      <label class="ctl" style="min-width:220px">Pair <output id="bStepOut"></output>
+      <label class="ctl" style="min-width:220px" for="bStep">Pair <output id="bStepOut"></output>
         <input type="range" id="bStep" min="0" max="0" value="0"></label>
       <label class="ctl check"><input type="checkbox" id="bZero"> Also list pairs that add nothing</label>
     </div>
@@ -360,7 +360,8 @@ h1.course-title{margin-top:48px !important}
     <label class="ctl">Nodes
       <select id="cumN"><option value="2000" selected>2,000</option><option value="5000">5,000</option></select></label>
     <label class="ctl check"><input type="checkbox" id="showRaw"> Show \(p(k)\) as points</label>
-    <span class="status" id="cumStatus"></span>
+    <button id="cumCancel" type="button" hidden>Cancel</button>
+    <span class="status" id="cumStatus" aria-live="polite"></span>
   </div>
   <div class="two">
     <div class="sheet">
@@ -385,7 +386,7 @@ h1.course-title{margin-top:48px !important}
   <p class="formula big">\[ \langle k^2\rangle = \frac{1}{N}\sum_i k_i^2, \qquad \kappa = \frac{\langle k^2\rangle}{\langle k\rangle^2} \]</p>
   <p>When degrees cluster around one value \(k_0\), both averages are close to \(k_0^2\) and \(\kappa\approx 1\). When a few hubs have huge degrees, their squares dominate \(\langle k^2\rangle\) and \(\kappa\gg 1\). For a random network \(\kappa = 1 + 1/\langle k\rangle\) whatever its size. For a power law with \(\gamma<3\), \(\kappa\) keeps growing as the network grows, because the largest hub does.</p>
   <div class="controls">
-    <label class="ctl">Exponent \(\gamma\) of the power-law sample <output id="kgOut">2.5</output>
+    <label class="ctl" for="kgIn">Exponent \(\gamma\) of the power-law sample <output id="kgOut">2.5</output>
       <input type="range" id="kgIn" min="2.1" max="3.5" step="0.1" value="2.5"></label>
     <span class="status" id="kapStatus"></span>
     <span class="status">Each point is the median of 21 samples.</span>
@@ -530,10 +531,37 @@ function bfs(g, s){
   return { dist, sig };
 }
 function brandes(g, withEdges){
+  const st = brandesInit(g, withEdges);
+  for (let s = 0; s < g.N; s++) brandesFrom(st, s);
+  return brandesDone(st);
+}
+// Same exact computation, split into chunks of sources so the page stays responsive.
+// Resolves to null when isCancelled() becomes true; onProgress gets the finished fraction.
+async function brandesChunked(g, withEdges, isCancelled, onProgress){
+  const st = brandesInit(g, withEdges);
+  let s = 0;
+  while (s < g.N){
+    const t0 = performance.now();
+    while (s < g.N && performance.now() - t0 < 30) brandesFrom(st, s++);
+    if (onProgress) onProgress(s / g.N);
+    await pause(); if (isCancelled()) return null;
+  }
+  return brandesDone(st);
+}
+function brandesInit(g, withEdges){
   const N = g.N, M = g.edges.length / 2;
-  const b = new Float64Array(N), eb = withEdges ? new Float64Array(M) : null;
-  const S = new Int32Array(N), dist = new Int32Array(N).fill(-1), sig = new Float64Array(N), del = new Float64Array(N);
-  for (let s = 0; s < N; s++){
+  return { g, b: new Float64Array(N), eb: withEdges ? new Float64Array(M) : null,
+    S: new Int32Array(N), dist: new Int32Array(N).fill(-1), sig: new Float64Array(N), del: new Float64Array(N) };
+}
+function brandesDone(st){
+  const { b, eb } = st;
+  for (let i = 0; i < b.length; i++) b[i] /= 2;
+  if (eb) for (let i = 0; i < eb.length; i++) eb[i] /= 2;
+  return { b, eb };
+}
+function brandesFrom(st, s){
+  const { g, b, eb, S, dist, sig, del } = st;
+  {
     let h = 0, t = 0; S[t++] = s; dist[s] = 0; sig[s] = 1;
     while (h < t){
       const v = S[h++], dv = dist[v] + 1;
@@ -553,9 +581,6 @@ function brandes(g, withEdges){
     }
     for (let i = 0; i < t; i++){ const v = S[i]; dist[v] = -1; sig[v] = 0; del[v] = 0; }
   }
-  for (let i = 0; i < N; i++) b[i] /= 2;
-  if (eb) for (let i = 0; i < M; i++) eb[i] /= 2;
-  return { b, eb };
 }
 function ranksOf(vals){
   const N = vals.length, idx = Array.from({ length: N }, (_, i) => i).sort((a, b) => vals[b] - vals[a]);
@@ -1181,7 +1206,9 @@ async function runCorr(){
   await pause(); if (tok !== corrToken) return;
   if (!cache["corr" + t]){
     const g = largestComponent(t === "sf" ? genBA(2000, 2) : t === "er" ? genER(2000, 4) : genComm(40, 50, 6, 70));
-    cache["corr" + t] = { g, b: brandes(g, false).b };
+    const r = await brandesChunked(g, false, () => tok !== corrToken, f => { $("corrStatus").textContent = `Computing betweenness for 2,000 nodes… ${Math.round(f * 100)}%`; });
+    if (!r) return;
+    cache["corr" + t] = { g, b: r.b };
   }
   if (tok !== corrToken) return;
   $("corrStatus").textContent = "";
@@ -1253,20 +1280,23 @@ document.querySelectorAll('input[name="scale"]').forEach(r => r.addEventListener
 /* ---------- cumulative distributions ---------- */
 let cum = null, cumToken = 0;
 async function runCum(){
-  const tok = ++cumToken, N = +$("cumN").value;
+  const tok = ++cumToken, N = +$("cumN").value, gone = () => tok !== cumToken;
+  $("cumCancel").hidden = false;
   $("cumStatus").textContent = `Generating two ${N.toLocaleString("en-US")}-node networks…`;
-  await pause(); if (tok !== cumToken) return;
+  await pause(); if (gone()) return;
   const sf = genBA(N, 2), er = largestComponent(genER(N, 4));
-  $("cumStatus").textContent = "Computing betweenness for the scale-free network…";
-  await pause(); if (tok !== cumToken) return;
-  const bs = brandes(sf, false).b;
-  $("cumStatus").textContent = "Computing betweenness for the random network…";
-  await pause(); if (tok !== cumToken) return;
-  const be = brandes(er, false).b;
-  cum = { sf, er, bs, be };
+  const bs = await brandesChunked(sf, false, gone, f => { $("cumStatus").textContent = `Computing betweenness for the scale-free network… ${Math.round(f * 100)}%`; });
+  if (!bs) return;
+  const be = await brandesChunked(er, false, gone, f => { $("cumStatus").textContent = `Computing betweenness for the random network… ${Math.round(f * 100)}%`; });
+  if (!be) return;
+  cum = { sf, er, bs: bs.b, be: be.b };
+  $("cumCancel").hidden = true;
   $("cumStatus").textContent = "";
   drawCum();
 }
+$("cumCancel").addEventListener("click", () => { cumToken++; $("cumCancel").hidden = true;
+  if (cum) $("cumN").value = String(cum.sf.N);
+  $("cumStatus").textContent = cum ? `Cancelled; still showing ${cum.sf.N.toLocaleString("en-US")} nodes.` : "Cancelled."; });
 function ccdf(vals){
   const v = Array.from(vals).filter(x => x > 0).sort((a, b) => b - a), n = vals.length, out = [];
   for (let i = 0; i < v.length; i++) if (i === v.length - 1 || v[i + 1] !== v[i]) out.push([v[i], (i + 1) / n]);
