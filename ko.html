@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- lang-link:head -->
+<script>(function(){var p=null;try{p=localStorage.getItem("lshlj82-demo-lang")}catch(e){}if(p&&p!=="ko"&&!/[?&]stay\b/.test(location.search))location.replace("index.html"+location.hash);})();</script>
+<style>
+#langBtn{position:fixed;z-index:21;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(env(safe-area-inset-right,0px) + 60px);min-width:40px;height:40px;padding:0 10px;border-radius:20px;display:grid;place-items:center;cursor:pointer;text-decoration:none;font:600 14px/1 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--lb-bg,rgba(255,255,255,.92));color:var(--lb-fg,#1d2633);border:1px solid var(--lb-bd,rgba(20,30,45,.18));box-shadow:0 1px 4px rgba(0,0,0,.12)}
+#langBtn:hover{border-color:currentColor}
+#langBtn:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+:root[data-theme="dark"] #langBtn{--lb-bg:rgba(22,28,38,.92);--lb-fg:#e8eef6;--lb-bd:rgba(255,255,255,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #langBtn{--lb-bg:rgba(22,28,38,.92);--lb-fg:#e8eef6;--lb-bd:rgba(255,255,255,.18)}}
+@media print{#langBtn{display:none}}
+html[lang="ko"] body{word-break:keep-all;overflow-wrap:break-word}
+</style>
+<!-- lang-link:head-end -->
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>네트워크 중심도 · Network centrality | 네트워크 과학 데모</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{
+  --paper:#EDF2F5; --sheet:#F9FBFC; --ink:#1B2A3A; --muted:#566676; --grid:#D2DDE5; --grid-minor:#E3EAF0;
+  --er:#24733D; --sf:#6A3D9E; --hub:#D21F3C; --node:#2C5F8E; --path:#A65B00; --edge:rgba(27,42,58,.22); --focus:#1F6FB2;
+  --display:"IBM Plex Sans KR",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1A24; --sheet:#152330; --ink:#E2E9EF; --muted:#94A4B3; --grid:#2A3B4A; --grid-minor:#1E2D3A;
+    --er:#5FC07B; --sf:#B591E6; --hub:#FF5C6C; --node:#7DB0E0; --path:#F2A23A; --edge:rgba(226,233,239,.2); --focus:#E8C46A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1A24; --sheet:#152330; --ink:#E2E9EF; --muted:#94A4B3; --grid:#2A3B4A; --grid-minor:#1E2D3A;
+  --er:#5FC07B; --sf:#B591E6; --hub:#FF5C6C; --node:#7DB0E0; --path:#F2A23A; --edge:rgba(226,233,239,.2); --focus:#E8C46A; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{
+  margin:0; background:var(--paper); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.6;
+  background-image:
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size:24px 24px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:0 20px}
+h1,h2,h3{font-family:var(--display); font-weight:600; line-height:1.15; margin:0; letter-spacing:-.01em}
+h1{font-size:clamp(42px,7.5vw,80px); letter-spacing:-.02em}
+.credit{font-size:14px; color:var(--muted); margin-top:10px}
+h2{font-size:clamp(28px,4.2vw,40px); margin-bottom:.4em}
+h3{font-size:21px; margin-bottom:.35em}
+p{margin:0 0 1em; max-width:68ch}
+.lede{font-size:18px; color:var(--muted); max-width:60ch}
+header{padding:56px 0 24px}
+section{padding:56px 0 8px}
+.sheet{background:var(--sheet); border:1px solid var(--grid); border-radius:6px; padding:18px}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+.hero-grid{display:grid; grid-template-columns:3fr 2fr; gap:18px; align-items:start}
+@media (max-width:780px){ .two, .hero-grid{grid-template-columns:1fr} }
+.note{font-size:14px; color:var(--muted); margin:0 0 10px}
+canvas{display:block; width:100%; max-width:100%}
+.netcv{aspect-ratio:1/1; cursor:crosshair; touch-action:none}
+.chart{aspect-ratio:4/3}
+.chart.wide{aspect-ratio:16/7}
+@media (max-width:780px){ .chart.wide{aspect-ratio:4/3} }
+.scroll{overflow-x:auto}
+.pick{cursor:pointer; font-family:var(--body); font-weight:500; color:var(--ink)}
+.pick:hover{border-color:var(--path); background:var(--sheet)}
+.chip.pick.on{border-color:var(--path); color:var(--path)}
+.pairlist{max-height:280px; overflow:auto; border:1px solid var(--grid); border-radius:6px; background:var(--sheet)}
+.pairlist table{width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums}
+.pairlist th{position:sticky; top:0; background:var(--sheet); color:var(--muted); font-weight:500; text-align:right; padding:6px 12px; border-bottom:1px solid var(--grid)}
+.pairlist td{text-align:right; padding:4px 12px; border-bottom:1px solid var(--grid-minor)}
+.pairlist th:nth-child(2), .pairlist td:nth-child(2){text-align:left}
+.pairlist tbody tr{cursor:pointer}
+.pairlist tbody tr:hover td{background:var(--grid-minor)}
+.pairlist tr.on td{background:var(--grid-minor); box-shadow:inset 0 -2px 0 var(--path)}
+.scroll svg.graph{min-width:620px}
+svg.graph{display:block; width:100%; height:auto; overflow:visible}
+svg.graph [data-n]{cursor:pointer}
+svg.graph [data-n]:focus{outline:none}
+svg.graph [data-n]:focus-visible circle.body{stroke:var(--focus); stroke-width:4}
+.controls{display:flex; flex-wrap:wrap; gap:18px 26px; align-items:end; margin:18px 0}
+.ctl{display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--muted); min-width:170px}
+.ctl output{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+input[type=range]{width:100%; accent-color:var(--sf)}
+select{font:inherit; font-size:15px; color:var(--ink); background:var(--sheet); border:1px solid var(--grid); border-radius:4px; padding:5px 8px}
+.check{flex-direction:row; align-items:center; gap:8px; min-width:0; color:var(--ink)}
+button{
+  font-family:var(--body); font-size:15px; font-weight:600; color:var(--sheet); background:var(--ink);
+  border:0; border-radius:4px; padding:9px 18px; cursor:pointer;
+}
+button:hover{background:var(--sf)}
+button:focus-visible, input:focus-visible, select:focus-visible, .seg input:focus-visible + span{outline:3px solid var(--focus); outline-offset:2px}
+.seg{display:inline-flex; border:1px solid var(--grid); border-radius:4px; background:var(--sheet); overflow:hidden}
+.seg label{position:relative; cursor:pointer}
+.seg input{position:absolute; opacity:0; inset:0; margin:0; cursor:pointer}
+.seg span{display:block; padding:6px 13px; font-size:15px; color:var(--ink); border-right:1px solid var(--grid)}
+.seg label:last-child span{border-right:0}
+.seg input:checked + span{background:var(--ink); color:var(--sheet)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:14px; color:var(--muted); margin:6px 0 0}
+.legend > span{display:inline-flex; align-items:center; gap:6px}
+.swatch{display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:-1px}
+.line-key{display:inline-block; width:22px; height:0; border-top:3px solid currentColor}
+.line-key.dash{border-top-style:dashed}
+.callout{font-family:var(--display); font-size:21px; line-height:1.4; margin:14px 0 4px; max-width:46ch}
+.callout .num{color:var(--hub); font-weight:700}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.chip{border:1.5px solid var(--grid); border-radius:999px; padding:3px 12px; font-size:14px; font-variant-numeric:tabular-nums; background:var(--sheet)}
+.chip.on{border-color:var(--hub); color:var(--hub)}
+.katex{font-size:1.1em}
+.formula.big{display:block; font-size:18px; margin:6px 0 16px; overflow-x:auto; overflow-y:hidden; padding:4px 0; max-width:100%}
+.formula.big .katex-display{margin:0}
+.formula.big .katex-display.fleqn > .katex{padding-left:0}
+.callout .katex, .legend .katex, .note .katex{font-size:1em}
+.tip{position:fixed; pointer-events:none; background:var(--ink); color:var(--sheet); font-size:13px; padding:3px 8px; border-radius:4px; opacity:0; transition:opacity .1s; z-index:5}
+.ranks{width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums}
+.ranks th{font-weight:500; color:var(--muted); text-align:left; padding:4px 6px 6px; border-bottom:1px solid var(--grid); vertical-align:bottom}
+.ranks th.cur{color:var(--ink); font-weight:600; box-shadow:inset 0 -3px 0 var(--hub)}
+.ranks td{padding:5px 6px; border-bottom:1px solid var(--grid-minor)}
+.ranks td:first-child{color:var(--muted); width:2.2em}
+.nodebtn{font-size:14px; font-weight:600; padding:1px 8px; border-radius:999px; background:transparent; color:var(--ink); border:1.5px solid var(--grid); min-width:2.6em}
+.nodebtn:hover, .nodebtn.on{background:var(--hub); border-color:var(--hub); color:#fff}
+.val{color:var(--muted); margin-left:4px}
+.detail{margin-top:14px; font-size:15px; min-height:4.8em}
+.detail b{font-variant-numeric:tabular-nums}
+.bars{display:grid; grid-template-columns:minmax(150px,auto) 1fr 3.2em; gap:4px 10px; font-size:14px; align-items:center}
+.bars .bar{height:12px; border-radius:2px; background:var(--muted); opacity:.55}
+.bars .mine{font-weight:600}
+.bars .mine.er .bar{background:var(--er); opacity:1}
+.bars .mine.sf .bar{background:var(--sf); opacity:1}
+.bars .num{text-align:right; font-variant-numeric:tabular-nums}
+code{font-size:14px; background:var(--grid-minor); padding:1px 5px; border-radius:3px}
+footer{padding:48px 0 64px; font-size:14px; color:var(--muted)}
+footer p{max-width:80ch}
+.status{font-size:13px; color:var(--muted); min-height:1.4em}
+.pathbar{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; min-height:2.4em; font-size:15px; margin:0 0 6px; color:var(--ink)}
+.pathbar .muted{color:var(--muted)}
+.pathbar .hj{display:inline-block; background:var(--path); color:#fff; border-radius:999px; padding:0 10px; font-weight:600}
+.pathbar .chips{margin-top:0; gap:6px}
+.pathbar button.chip{font-size:14px; padding:2px 11px}
+.pathbar button.chip.on{background:var(--path); border-color:var(--path); color:#fff}
+.multi{color:var(--path); font-weight:700}
+.pairlist td.multi{font-weight:600}
+#btwSvg [data-n]:hover circle.hit{fill:var(--path) !important; fill-opacity:.22}
+@media (prefers-reduced-motion: reduce){ .tip{transition:none} }
+</style>
+<script>try { const t = localStorage.getItem("netsci-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+button.theme-btn{position:fixed; z-index:20; top:calc(env(safe-area-inset-top, 0px) + 12px); right:calc(env(safe-area-inset-right, 0px) + 12px);
+  width:40px; height:40px; padding:0; border-radius:50%; display:grid; place-items:center; cursor:pointer;
+  background:var(--sheet, var(--paper)); color:var(--ink); border:1px solid var(--grid, var(--rule)); box-shadow:0 1px 4px rgba(0,0,0,.12)}
+button.theme-btn:hover{background:var(--sheet, var(--paper)); color:var(--ink); border-color:var(--ink)}
+button.theme-btn:focus-visible{outline:3px solid var(--focus, var(--node)); outline-offset:2px}
+button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@600&family=Noto+Serif+KR:wght@400&display=swap" rel="stylesheet">
+<style>
+/* Course-wide demo title: the same on every demo page and on the course landing page */
+h1.course-title{font-family:"STIX Two Text","Noto Serif KR",Cambria,"Times New Roman",serif !important;font-weight:600 !important;font-style:normal !important;font-size:clamp(30px,3.6vw,44px) !important;line-height:1.08 !important;letter-spacing:-.01em !important;text-transform:none !important;color:var(--ink) !important;word-break:keep-all}
+h1.course-title .course-title-ko{display:block;font-family:"Noto Serif KR","STIX Two Text",serif;font-weight:400;font-size:.5em;line-height:1.3;letter-spacing:0;color:var(--muted);margin:.3em 0 0}
+/* space above the title, so it starts about 48px (phones: 32px) below the top of the page */
+h1.course-title{margin-top:48px !important}
+@media (max-width:700px){h1.course-title{margin-top:32px !important}}
+</style>
+</head>
+<body>
+<!-- lang-link:body -->
+<a id="langBtn" href="index.html" hreflang="en" lang="en" aria-label="View in English" title="View in English">EN</a>
+<script>document.getElementById("langBtn").addEventListener("click",function(){try{localStorage.setItem("lshlj82-demo-lang","en")}catch(e){}});</script>
+<!-- lang-link:body-end -->
+<button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
+<div class="tip" id="tip"></div>
+
+<header class="wrap">
+  <h1 class="course-title">네트워크 중심도<span class="course-title-ko" lang="en">Network centrality</span></h1>
+  <p class="credit">이상훈 교수의 강의 슬라이드를 바탕으로 Claude Opus 5.5가 만들었습니다.</p>
+  <p class="lede" style="margin-top:18px">허브는 “다른 것들이 그 둘레를 도는 중심”입니다. 그렇다면 어느 노드가 중심일까요? 링크를 세거나, 다른 모든 노드에 얼마나 가까이 있는지 재거나, 그 노드를 지나는 최단 경로를 셀 수 있습니다. 네트워크와 척도를 골라 누가 1등을 하는지 보세요.</p>
+
+  <div class="controls">
+    <label class="ctl"><span>네트워크</span>
+      <select id="heroNet">
+        <option value="hub" selected><span>항공 허브와 바큇살</span></option>
+        <option value="two"><span>두 무리와 중개자</span></option>
+        <option value="sf"><span>척도 없음 (바라바시–알버트)</span></option>
+        <option value="er"><span>무작위 (에르되시–레니)</span></option>
+      </select></label>
+    <div class="ctl"><span>노드 순위 기준</span>
+      <div class="seg" role="radiogroup" aria-label="중심도 척도">
+        <label><input type="radio" name="measure" value="deg" checked><span><span>연결선수 k</span></span></label>
+        <label><input type="radio" name="measure" value="clo"><span><span>근접 중심도 g̃</span></span></label>
+        <label><input type="radio" name="measure" value="btw"><span><span>사이 중심도 b̃</span></span></label>
+      </div>
+    </div>
+    <button id="regen" type="button">다시 만들기</button>
+  </div>
+
+  <div class="hero-grid">
+    <div class="sheet">
+      <canvas id="heroCv" class="netcv" aria-label="고른 중심도로 노드 크기를 정한 네트워크 그림"></canvas>
+      <div class="legend"><span>점의 크기와 진하기는 고른 척도에 따라 커집니다.</span>
+        <span><span class="swatch" style="background:var(--hub)"></span>상위 다섯, 순위대로 번호</span>
+        <span>노드에 마우스를 올리거나 누르면 값이 보입니다.</span></div>
+    </div>
+    <div class="sheet">
+      <h3>척도별 상위 다섯</h3>
+      <p class="note">노드 번호는 이름표입니다. 하나를 고르면 그림에서 찾아 줍니다.</p>
+      <table class="ranks" id="ranks"></table>
+      <div class="detail" id="detail"></div>
+    </div>
+  </div>
+  <p class="callout" id="agree"></p>
+</header>
+
+<main class="wrap">
+
+<section id="closeness">
+  <h2>노드는 다른 모든 노드에 얼마나 가까운가?</h2>
+  <p>연결선수는 가장 간단한 중심도로, 이웃의 수입니다: <code>G.degree(i)</code> ≡ <code>len(G.neighbors(i))</code>. 아래의 작은 네트워크에서는 노드 3의 링크가 가장 많으므로 허브입니다. 근접 중심도는 다른 질문을 던집니다. 노드 \(i\)에서 다른 모든 노드까지의 거리 \(l_{ij}\)를 더한 다음 역수를 취합니다:</p>
+  <p class="formula big">\[ g_i = \frac{1}{\sum_{j\neq i} l_{ij}}, \qquad \tilde g_i = (N-1)\,g_i = \frac{1}{\sum_{j\neq i} l_{ij}\,/\,(N-1)} \]</p>
+  <p>거리의 합이 짧을수록 근접 중심도가 높습니다. 다시 축척한 \(\tilde g_i\)는 \(i\)로부터의 평균 거리의 역수입니다. 노드를 하나 고른 다음, 목록에서 다른 노드를 골라 각 거리를 이루는 최단 경로를 보세요.</p>
+  <div class="two">
+    <div class="sheet">
+      <h3>노드 고르기</h3>
+      <p class="note">원 안의 숫자는 고른 노드로부터의 거리입니다. 바깥의 이름표는 노드 번호와 연결선수입니다.</p>
+      <svg class="graph" id="cloSvg" viewBox="0 0 580 370" role="group" aria-label="근접 중심도를 위한 노드 일곱 개 네트워크"></svg>
+      <div class="legend"><span style="color:var(--path)"><span class="line-key"></span>고른 목적지까지의 최단 경로</span></div>
+    </div>
+    <div>
+      <p class="callout" id="cloText" style="margin-top:0"></p>
+      <p class="note" style="margin-top:18px">각 거리가 나오는 곳: 목적지를 고르세요</p>
+      <div class="chips" id="cloPaths"></div>
+      <div class="controls" style="margin:12px 0 0"><button id="cloNext" type="button">다음 목적지</button></div>
+      <p id="cloPathText" style="margin-top:12px"></p>
+      <p class="note" style="margin-top:18px">모든 노드의 근접 중심도, 높은 순</p>
+      <div class="chips" id="cloChips"></div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:36px">왜 \(N-1\)로 다시 축척하는가</h3>
+  <p>\(g_i\)의 합에는 항이 \(N-1\)개 있으므로 네트워크 크기에 따라 커집니다. 열역학의 말로 하면 부피처럼 크기 변수입니다: 토끼 두 마리는 한 마리보다 부피가 두 배이지만, 온도가 두 배는 아닙니다. 따라서 날 근접 중심도는 네트워크가 커질수록 줄어들어, 네트워크끼리 비교할 수 없습니다. 항의 개수로 나누면 평균이 되어 세기 변수처럼 행동합니다. 평균 거리 자체가 \(\log N\)처럼 커지므로 여전히 천천히 내려가지만, 더 이상 무너지지는 않습니다. 한 네트워크 안의 순위는 어느 쪽이든 바뀌지 않습니다.</p>
+  <div class="two">
+    <div class="sheet">
+      <h3>날 근접 중심도 \(g\)</h3>
+      <canvas id="gRawCv" class="chart" aria-label="네트워크 크기에 따른 평균 날 근접 중심도"></canvas>
+    </div>
+    <div class="sheet">
+      <h3>다시 축척한 근접 중심도 \(\tilde g\)</h3>
+      <canvas id="gNormCv" class="chart" aria-label="네트워크 크기에 따른 평균 축척 근접 중심도"></canvas>
+    </div>
+  </div>
+  <div class="legend"><span style="color:var(--er)"><span class="line-key"></span>무작위 네트워크, \(\langle k\rangle = 4\)</span>
+    <span style="color:var(--sf)"><span class="line-key"></span>척도 없는 네트워크, \(\langle k\rangle = 4\)</span>
+    <span style="color:var(--muted)"><span class="line-key dash"></span>비교용 \(1/N\)</span></div>
+  <p class="status" id="gStatus"></p>
+</section>
+
+<section id="betweenness">
+  <h2>누가 최단 경로 위에 있는가?</h2>
+  <p>노드 \(h\)와 \(j\)의 모든 쌍에 대해 그 사이의 최단 경로를 찾고, 중간에 있는 각 노드에 1점씩 줍니다. 최단 경로가 여러 개이면 점수를 나눠 줍니다: \(\sigma_{hj}\)는 \(h\)에서 \(j\)까지의 최단 경로 수, \(\sigma_{hj}(i)\)는 그중 \(i\)를 지나는 경로 수입니다.</p>
+  <p class="formula big">\[ b_i = \sum_{h\neq j\neq i} \frac{\sigma_{hj}(i)}{\sigma_{hj}}, \qquad \tilde b_i = \frac{b_i}{(N-1)(N-2)/2} \]</p>
+  <p>규격화한 \(\tilde b_i\)는 근접 중심도를 다시 축척하는 것과 같은 이유로 \(i\)를 포함하지 않는 쌍의 수로 나눕니다. “노드 \(i\)”를 “링크 \(i\)”로 바꾸면 링크 사이 중심도가 됩니다. 사이 중심도가 높은 노드와 링크는 통행량 대부분을 실어 나르므로 수송과 확산의 병목입니다. 아래에서 한 번에 한 쌍씩 보거나, 노드나 링크를 골라 그 사이 중심도에 보태는 쌍을 하나씩 따라가 보세요.</p>
+  <div class="controls">
+    <div class="ctl"><span>살펴보기</span>
+      <div class="seg" role="radiogroup" aria-label="살펴볼 것">
+        <label><input type="radio" name="bpick" value="pair" checked><span><span>한 쌍</span></span></label>
+        <label><input type="radio" name="bpick" value="node"><span><span>노드의 전체 합</span></span></label>
+        <label><input type="radio" name="bpick" value="edge"><span><span>링크의 전체 합</span></span></label>
+      </div>
+    </div>
+    <div class="ctl"><span>크기와 진하기 기준</span>
+      <div class="seg" role="radiogroup" aria-label="사이 중심도 표시">
+        <label><input type="radio" name="bmode" value="node" checked><span><span>노드 사이 중심도</span></span></label>
+        <label><input type="radio" name="bmode" value="edge"><span><span>링크 사이 중심도</span></span></label>
+      </div>
+    </div>
+    <button id="bClear" type="button">지우기</button>
+  </div>
+  <div class="sheet">
+    <div class="pathbar" id="bPaths" aria-live="polite"></div>
+    <div class="scroll"><svg class="graph" id="btwSvg" viewBox="0 0 760 440" role="group" aria-label="사이 중심도를 위한 병목이 있는 네트워크"></svg></div>
+    <div class="legend"><span id="bHint">두 노드 h와 j를 고르면 그 사이의 모든 최단 경로가 보입니다.</span>
+      <span style="color:var(--path)"><span class="line-key"></span>h에서 j까지의 최단 경로와 각 노드의 몫</span>
+      <span style="color:var(--hub)"><span class="line-key"></span>합하고 있는 노드나 링크</span></div>
+  </div>
+  <p class="callout" id="btwText"></p>
+  <div id="bWalk" hidden>
+    <div class="controls" style="margin:12px 0">
+      <button id="bPrev" type="button">이전 쌍</button>
+      <button id="bNext" type="button">다음 쌍</button>
+      <button id="bPlay" type="button">Play</button>
+      <label class="ctl" style="min-width:220px" for="bStep"><span>쌍</span> <output id="bStepOut"></output>
+        <input type="range" id="bStep" min="0" max="0" value="0"></label>
+      <label class="ctl check"><input type="checkbox" id="bZero"> <span>보태는 것이 없는 쌍도 보이기</span></label>
+    </div>
+    <div class="pairlist" id="bList" tabindex="0" aria-label="합에 보태는 모든 쌍"></div>
+  </div>
+
+  <h3 style="margin-top:36px">링크가 많은가, 유일한 다리인가</h3>
+  <p>연결선수와 사이 중심도는 흔히 함께 가지만, 늘 그렇지는 않습니다. 아래 두 네트워크 모두 노드 3을 강조했습니다. 왼쪽에서는 링크가 많고 사이 중심도는 그저 그렇습니다. 오른쪽에서는 링크가 둘뿐인데, 넷짜리 무리와 다섯짜리 무리 사이의 모든 경로가 그 노드를 건너야 하므로 \(b_3 = 4\times 5 = 20\)입니다. 아무 노드나 골라 값을 보세요.</p>
+  <div class="two">
+    <div class="sheet"><svg class="graph" id="figA" viewBox="-20 0 340 200" role="group" aria-label="노드 다섯 개 예제"></svg><p class="callout" id="figAText" style="text-align:center; max-width:none"></p></div>
+    <div class="sheet"><svg class="graph" id="figB" viewBox="0 0 460 200" role="group" aria-label="노드 열 개 다리 예제"></svg><p class="callout" id="figBText" style="text-align:center; max-width:none"></p></div>
+  </div>
+</section>
+
+<section id="correlation">
+  <h2>연결선수와 사이 중심도는 보통 맞아떨어진다</h2>
+  <p>모든 노드의 사이 중심도를 연결선수에 대해 그려 봅시다. 대부분의 네트워크에서 점구름은 오른쪽 위로 뻗습니다: 허브는 그저 많은 경로가 지나갈 수 있기 때문에 많은 최단 경로 위에 놓입니다. 고광일과 동료들은 인터넷의 라우터 수준 지도에서 이를 발견했습니다. 몇 개의 링크로 이어진 빽빽한 무리들로 이루어진 네트워크는 이 패턴을 깹니다. 그런 링크의 끝에 있는 노드는 연결선수는 평범하지만 무리 사이의 통행량을 모두 실어 나릅니다.</p>
+  <div class="controls">
+    <label class="ctl"><span>네트워크 (노드 2,000개, \(\langle k\rangle \approx 4\)~6)</span>
+      <select id="corrNet">
+        <option value="sf" selected><span>척도 없음</span></option>
+        <option value="er"><span>무작위</span></option>
+        <option value="comm"><span>링크 몇 개로 이어진 40개 무리</span></option>
+      </select></label>
+    <span class="status" id="corrStatus"></span>
+  </div>
+  <div class="sheet">
+    <canvas id="corrCv" class="chart wide" aria-label="모든 노드의 연결선수에 따른 사이 중심도"></canvas>
+    <div class="legend"><span style="color:var(--node)"><span class="swatch" style="background:var(--node)"></span>노드 하나</span>
+      <span style="color:var(--ink)"><span class="line-key"></span>연결선수별 평균 사이 중심도</span>
+      <span style="color:var(--hub)"><span class="swatch" style="background:var(--hub)"></span>낮은 연결선수, 사이 중심도 상위 1%</span></div>
+  </div>
+  <p class="callout" id="corrText"></p>
+</section>
+
+<section id="distributions">
+  <h2>중심도 분포</h2>
+  <p>순위 매기기는 가장 중요한 노드 하나를 찾는 일로, 극단값에 대한 질문입니다. 네트워크 전체를 이해하려면 전체 스펙트럼, 즉 각 값을 가진 노드가 몇 개인지가 필요합니다. 연결선수가 \(k\)인 노드 \(n_k\)개를 세면 \(\sum_k n_k = N\)인 히스토그램이 됩니다. \(N\)으로 나누면 상대 빈도 \(f_k = n_k/N\)이 되고, 네트워크가 커질수록 확률 분포 \(p_k\)에 다가갑니다. 사이 중심도와 근접 중심도는 정수가 아니므로 구간으로 셉니다.</p>
+  <div class="sheet">
+    <h3 id="histTitle">Histogram of the network at the top</h3>
+    <canvas id="histCv" class="chart wide" aria-label="고른 중심도의 히스토그램"></canvas>
+    <p class="note" style="margin-top:8px">네트워크와 척도는 페이지 맨 위에서 고른 것을 따릅니다. 왼쪽 축: 개수 \(n\). 오른쪽 축: 비율 \(f = n/N\).</p>
+  </div>
+
+  <h3 style="margin-top:36px">축 고르기</h3>
+  <p>여러 자릿수에 걸친 분포에는 로그 축이 필요합니다. 선형 축에서는 지수 분포 \(p(k)\propto e^{-k}\)와 거듭제곱 법칙 \(p(k)\propto k^{-3}\)이 꽤 비슷해 보입니다. 반로그 그림은 지수 분포를 직선으로 만듭니다. 로그–로그 그림은 거듭제곱 법칙을 직선으로 만들고, 그 꼬리가 얼마나 더 두꺼운지 보여 줍니다.</p>
+  <div class="controls">
+    <div class="ctl"><span>축</span>
+      <div class="seg" role="radiogroup" aria-label="축 눈금">
+        <label><input type="radio" name="scale" value="lin" checked><span><span>선형</span></span></label>
+        <label><input type="radio" name="scale" value="semi"><span><span>반로그</span></span></label>
+        <label><input type="radio" name="scale" value="log"><span><span>로그–로그</span></span></label>
+      </div>
+    </div>
+  </div>
+  <div class="sheet">
+    <canvas id="scaleCv" class="chart wide" aria-label="지수 분포와 거듭제곱 분포"></canvas>
+    <div class="legend"><span style="color:var(--er)"><span class="line-key"></span>지수 분포, \(p(k)\propto e^{-k}\)</span>
+      <span style="color:var(--sf)"><span class="line-key"></span>거듭제곱 법칙, \(p(k)\propto k^{-3}\)</span></div>
+  </div>
+
+  <h3 style="margin-top:36px">누적 분포</h3>
+  <p>큰 값은 드물기 때문에 \(p(k)\)의 꼬리는 잡음이 많습니다. 값이 적어도 \(k\)인 노드의 비율인 누적 분포 \(P(k)=\sum_{k'\ge k} p(k')\)는 그 잡음을 평균해 없앱니다. 거듭제곱 법칙의 누적 분포는 한 단계 완만한 거듭제곱 법칙입니다: \(p(k)\propto k^{-\gamma}\)이면 \(P(k)\propto k^{-(\gamma-1)}\)이며, \(\gamma>1\)에서 정의됩니다. 지수 분포는 지수 분포로 남습니다. 트위터와 위키백과 같은 실제 네트워크는 연결선수와 사이 중심도 모두에서 여러 자릿수에 걸친 두꺼운 꼬리를 보입니다.</p>
+  <div class="controls">
+    <label class="ctl"><span>노드 수</span>
+      <select id="cumN"><option value="2000" selected>2,000</option><option value="5000">5,000</option></select></label>
+    <label class="ctl check"><input type="checkbox" id="showRaw"> <span>\(p(k)\)를 점으로 보이기</span></label>
+    <button id="cumCancel" type="button" hidden>취소</button>
+    <span class="status" id="cumStatus" aria-live="polite"></span>
+  </div>
+  <div class="two">
+    <div class="sheet">
+      <h3>연결선수</h3>
+      <canvas id="cumDeg" class="chart" aria-label="연결선수의 누적 분포"></canvas>
+    </div>
+    <div class="sheet">
+      <h3>사이 중심도</h3>
+      <canvas id="cumBtw" class="chart" aria-label="사이 중심도의 누적 분포"></canvas>
+    </div>
+  </div>
+  <div class="legend"><span style="color:var(--er)"><span class="line-key"></span>무작위 네트워크</span>
+    <span style="color:var(--sf)"><span class="line-key"></span>척도 없는 네트워크</span>
+    <span style="color:var(--muted)"><span class="line-key dash"></span>\(P(k)\propto k^{-2}\), \(\gamma = 3\)의 예측</span></div>
+</section>
+
+<section id="heterogeneity">
+  <h2>분포는 얼마나 넓은가?</h2>
+  <p>허브는 연결선수가 유난히 큰 노드이지만, 꼬리가 두꺼운 분포에서는 수학적인 의미로 유별나지 않습니다: 같은 매끄러운 꼬리의 일부입니다. 그 꼬리가 얼마나 넓은지를 숫자 하나로 잡을 수 있습니다. 연결선수 제곱의 평균을 평균의 제곱과 비교합니다:</p>
+  <p class="formula big">\[ \langle k^2\rangle = \frac{1}{N}\sum_i k_i^2, \qquad \kappa = \frac{\langle k^2\rangle}{\langle k\rangle^2} \]</p>
+  <p>연결선수가 한 값 \(k_0\) 둘레에 모여 있으면 두 평균이 모두 \(k_0^2\)에 가까워 \(\kappa\approx 1\)입니다. 몇몇 허브의 연결선수가 엄청나게 크면 그 제곱이 \(\langle k^2\rangle\)를 지배하여 \(\kappa\gg 1\)입니다. 무작위 네트워크에서는 크기와 상관없이 \(\kappa = 1 + 1/\langle k\rangle\)입니다. \(\gamma<3\)인 거듭제곱 법칙에서는 가장 큰 허브가 커지므로 네트워크가 커질수록 \(\kappa\)가 계속 커집니다.</p>
+  <div class="controls">
+    <label class="ctl" for="kgIn"><span>거듭제곱 법칙 표본의 지수 \(\gamma\)</span> <output id="kgOut">2.5</output>
+      <input type="range" id="kgIn" min="2.1" max="3.5" step="0.1" value="2.5"></label>
+    <span class="status" id="kapStatus"></span>
+    <span><span class="status">각 점은 표본 21개의 중앙값입니다.</span></span>
+  </div>
+  <div class="two">
+    <div class="sheet">
+      <h3>네트워크가 커질 때의 \(\kappa\)</h3>
+      <canvas id="kapCv" class="chart" aria-label="네트워크 크기에 따른 이질성 매개변수"></canvas>
+      <div class="legend"><span style="color:var(--er)"><span class="line-key"></span>무작위</span>
+        <span style="color:var(--sf)"><span class="line-key"></span>척도 없음 (BA, \(\gamma = 3\))</span>
+        <span style="color:var(--hub)"><span class="line-key"></span>거듭제곱 법칙 연결선수, 고른 \(\gamma\)</span></div>
+    </div>
+    <div class="sheet">
+      <h3>실제 네트워크</h3>
+      <p class="note">Menczer, Fortunato, Davis의 표 3.1에 있는 네트워크들의 \(\kappa\)에, 직접 만든 노드 10,000개짜리 네트워크 두 개를 더했습니다. 막대는 로그 눈금입니다.</p>
+      <div class="bars" id="kapBars"></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="wrap">
+  <p>이상훈 교수의 강의 슬라이드를 바탕으로 Claude Opus 5.5가 만들었습니다.</p>
+  <p>이 페이지의 모든 네트워크는 브라우저에서 만들고 잽니다. 사이 중심도는 브란데스 알고리즘으로 정확히 계산하며, 순서 없는 쌍을 한 번씩 셉니다. 근접 중심도는 너비 우선 탐색을 쓰며, 연결되지 않은 네트워크에서는 NetworkX에서처럼 닿을 수 있는 노드의 비율로 축척합니다. 맨 위의 네트워크는 가장 큰 연결 덩어리만 남깁니다. 실제 네트워크 값은 F. Menczer, S. Fortunato and C. A. Davis, <i>A First Course in Network Science</i> (Cambridge University Press, 2020)의 표 3.1에서 가져왔습니다. 인터넷에서의 연결선수–사이 중심도 상관은 K.-I. Goh, E. Oh, B. Kahng and D. Kim, Phys. Rev. E 67, 017101 (2003)이 보고했습니다.</p>
+</footer>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- math typesetting (KaTeX, with plain TeX as the fallback) ---------- */
+const MATH_OPTS = { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], throwOnError: false, fleqn: true, trust: c => c.command === "\\htmlClass" };
+function typeset(el){ if (window.renderMathInElement && el) renderMathInElement(el, MATH_OPTS); }
+function setMath(el, html){ el.innerHTML = html; typeset(el); }
+const $ = id => document.getElementById(id);
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let RNG = Math.random;
+const rnd = n => (RNG() * n) | 0;
+function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function seeded(seed, fn){ const old = RNG; RNG = mulberry32(seed); try { return fn(); } finally { RNG = old; } }
+const pause = () => new Promise(r => setTimeout(r, 0));
+const fmt = (v, d = 3) => v === 0 ? "0" : v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(d);
+
+/* ---------- graphs ---------- */
+function build(N, edges){
+  const deg = new Int32Array(N);
+  for (let i = 0; i < edges.length; i++) deg[edges[i]]++;
+  const off = new Int32Array(N + 1);
+  for (let i = 0; i < N; i++) off[i + 1] = off[i] + deg[i];
+  const fill = off.slice(0, N), nbr = new Int32Array(edges.length), eid = new Int32Array(edges.length);
+  for (let i = 0; i < edges.length; i += 2){
+    const a = edges[i], b = edges[i + 1];
+    eid[fill[a]] = i >> 1; nbr[fill[a]++] = b;
+    eid[fill[b]] = i >> 1; nbr[fill[b]++] = a;
+  }
+  return { N, deg, off, nbr, eid, edges: Int32Array.from(edges) };
+}
+function EdgeSet(N){ const seen = new Set(), e = []; return { e, add(a, b){ if (a === b) return false; if (a > b){ const t = a; a = b; b = t; } const k = a * N + b; if (seen.has(k)) return false; seen.add(k); e.push(a, b); return true; } }; }
+function genER(N, kavg){
+  const M = Math.min(Math.round(N * kavg / 2), N * (N - 1) / 2), S = EdgeSet(N);
+  while (S.e.length < 2 * M) S.add(rnd(N), rnd(N));
+  return build(N, S.e);
+}
+function genBA(N, m){
+  const edges = [], ends = [], m0 = m + 1;
+  for (let i = 0; i < m0; i++) for (let j = 0; j < i; j++){ edges.push(i, j); ends.push(i, j); }
+  const chosen = new Set();
+  for (let v = m0; v < N; v++){
+    chosen.clear();
+    while (chosen.size < m) chosen.add(ends[rnd(ends.length)]);
+    for (const t of chosen){ edges.push(v, t); ends.push(v, t); }
+  }
+  return build(N, edges);
+}
+function addCluster(S, ids, p){
+  for (let i = 0; i < ids.length; i++) S.add(ids[i], ids[(i + 1) % ids.length]);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 2; j < ids.length; j++) if (RNG() < p) S.add(ids[i], ids[j]);
+}
+function genHubSpoke(){
+  const H = 4, SP = 72, N = H + SP, S = EdgeSet(N), w = [.38, .27, .2, .15], prim = [];
+  for (let i = 0; i < H; i++) for (let j = 0; j < i; j++) S.add(i, j);
+  const pickHub = () => { let r = RNG(), h = 0; while (r > w[h]) r -= w[h++]; return Math.min(h, H - 1); };
+  for (let s = 0; s < SP; s++){
+    const v = H + s, h = pickHub(); prim.push(h); S.add(v, h);
+    if (RNG() < .22){ let h2 = pickHub(); if (h2 !== h) S.add(v, h2); }
+  }
+  for (let t = 0; t < 16; t++){ const a = rnd(SP), b = rnd(SP); if (prim[a] === prim[b]) S.add(H + a, H + b); }
+  return build(N, S.e);
+}
+function genTwo(){
+  const A = 18, B = 20, N = A + B + 4, S = EdgeSet(N);
+  addCluster(S, Array.from({ length: A }, (_, i) => i), .3);
+  addCluster(S, Array.from({ length: B }, (_, i) => A + i), .26);
+  const X = A + B; S.add(X, rnd(A)); S.add(X, A + rnd(B));
+  S.add(X, X + 1); S.add(X + 1, X + 2); S.add(X + 1, X + 3);
+  return build(N, S.e);
+}
+function genComm(G, size, kin, between){
+  const N = G * size, S = EdgeSet(N), p = Math.max(0, (kin - 2) / (size - 3));
+  for (let c = 0; c < G; c++) addCluster(S, Array.from({ length: size }, (_, i) => c * size + i), p);
+  for (let c = 0; c < G; c++) S.add(c * size + rnd(size), ((c + 1) % G) * size + rnd(size));
+  let n = 0;
+  while (n < between - G){ const a = rnd(N), b = rnd(N); if ((a / size | 0) !== (b / size | 0) && S.add(a, b)) n++; }
+  return build(N, S.e);
+}
+function largestComponent(g){
+  const comp = new Int32Array(g.N).fill(-1), q = new Int32Array(g.N);
+  let best = -1, bestSize = 0, c = 0;
+  for (let s = 0; s < g.N; s++){
+    if (comp[s] >= 0) continue;
+    let h = 0, t = 0; q[t++] = s; comp[s] = c;
+    while (h < t){ const v = q[h++]; for (let p = g.off[v]; p < g.off[v + 1]; p++){ const u = g.nbr[p]; if (comp[u] < 0){ comp[u] = c; q[t++] = u; } } }
+    if (t > bestSize){ bestSize = t; best = c; }
+    c++;
+  }
+  if (bestSize === g.N) return g;
+  const map = new Int32Array(g.N).fill(-1); let n = 0;
+  for (let i = 0; i < g.N; i++) if (comp[i] === best) map[i] = n++;
+  const e = [];
+  for (let i = 0; i < g.edges.length; i += 2){ const a = map[g.edges[i]]; if (a >= 0) e.push(a, map[g.edges[i + 1]]); }
+  return build(n, e);
+}
+
+/* ---------- centrality ---------- */
+function closeness(g){
+  const N = g.N, raw = new Float64Array(N), norm = new Float64Array(N), dist = new Int32Array(N), q = new Int32Array(N);
+  for (let s = 0; s < N; s++){
+    dist.fill(-1); let h = 0, t = 0, sum = 0; q[t++] = s; dist[s] = 0;
+    while (h < t){ const v = q[h++]; for (let p = g.off[v]; p < g.off[v + 1]; p++){ const u = g.nbr[p]; if (dist[u] < 0){ dist[u] = dist[v] + 1; sum += dist[u]; q[t++] = u; } } }
+    const r = t - 1;
+    raw[s] = sum > 0 ? 1 / sum : 0;
+    norm[s] = sum > 0 ? (r / (N - 1)) * (r / sum) : 0;
+  }
+  return { raw, norm };
+}
+function bfs(g, s){
+  const N = g.N, dist = new Int32Array(N).fill(-1), sig = new Float64Array(N), q = new Int32Array(N);
+  let h = 0, t = 0; q[t++] = s; dist[s] = 0; sig[s] = 1;
+  while (h < t){ const v = q[h++]; for (let p = g.off[v]; p < g.off[v + 1]; p++){ const u = g.nbr[p]; if (dist[u] < 0){ dist[u] = dist[v] + 1; q[t++] = u; } if (dist[u] === dist[v] + 1) sig[u] += sig[v]; } }
+  return { dist, sig };
+}
+function brandes(g, withEdges){
+  const st = brandesInit(g, withEdges);
+  for (let s = 0; s < g.N; s++) brandesFrom(st, s);
+  return brandesDone(st);
+}
+// Same exact computation, split into chunks of sources so the page stays responsive.
+// Resolves to null when isCancelled() becomes true; onProgress gets the finished fraction.
+async function brandesChunked(g, withEdges, isCancelled, onProgress){
+  const st = brandesInit(g, withEdges);
+  let s = 0;
+  while (s < g.N){
+    const t0 = performance.now();
+    while (s < g.N && performance.now() - t0 < 30) brandesFrom(st, s++);
+    if (onProgress) onProgress(s / g.N);
+    await pause(); if (isCancelled()) return null;
+  }
+  return brandesDone(st);
+}
+function brandesInit(g, withEdges){
+  const N = g.N, M = g.edges.length / 2;
+  return { g, b: new Float64Array(N), eb: withEdges ? new Float64Array(M) : null,
+    S: new Int32Array(N), dist: new Int32Array(N).fill(-1), sig: new Float64Array(N), del: new Float64Array(N) };
+}
+function brandesDone(st){
+  const { b, eb } = st;
+  for (let i = 0; i < b.length; i++) b[i] /= 2;
+  if (eb) for (let i = 0; i < eb.length; i++) eb[i] /= 2;
+  return { b, eb };
+}
+function brandesFrom(st, s){
+  const { g, b, eb, S, dist, sig, del } = st;
+  {
+    let h = 0, t = 0; S[t++] = s; dist[s] = 0; sig[s] = 1;
+    while (h < t){
+      const v = S[h++], dv = dist[v] + 1;
+      for (let p = g.off[v]; p < g.off[v + 1]; p++){
+        const u = g.nbr[p];
+        if (dist[u] < 0){ dist[u] = dv; S[t++] = u; }
+        if (dist[u] === dv) sig[u] += sig[v];
+      }
+    }
+    for (let i = t - 1; i > 0; i--){
+      const w = S[i], dw = dist[w] - 1, f = (1 + del[w]) / sig[w];
+      for (let p = g.off[w]; p < g.off[w + 1]; p++){
+        const v = g.nbr[p];
+        if (dist[v] === dw){ const c = sig[v] * f; del[v] += c; if (eb) eb[g.eid[p]] += c; }
+      }
+      b[w] += del[w];
+    }
+    for (let i = 0; i < t; i++){ const v = S[i]; dist[v] = -1; sig[v] = 0; del[v] = 0; }
+  }
+}
+function ranksOf(vals){
+  const N = vals.length, idx = Array.from({ length: N }, (_, i) => i).sort((a, b) => vals[b] - vals[a]);
+  const rank = new Int32Array(N);
+  for (let i = 0; i < N; i++) rank[idx[i]] = (i > 0 && vals[idx[i]] === vals[idx[i - 1]]) ? rank[idx[i - 1]] : i + 1;
+  return { idx, rank };
+}
+function spearman(x, y){
+  const avgRank = v => { const n = v.length, idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => v[a] - v[b]), r = new Float64Array(n);
+    for (let i = 0; i < n;){ let j = i; while (j + 1 < n && v[idx[j + 1]] === v[idx[i]]) j++; for (let k = i; k <= j; k++) r[idx[k]] = (i + j) / 2; i = j + 1; } return r; };
+  const a = avgRank(x), b = avgRank(y), n = x.length, m = (n - 1) / 2;
+  let sab = 0, saa = 0, sbb = 0;
+  for (let i = 0; i < n; i++){ const da = a[i] - m, db = b[i] - m; sab += da * db; saa += da * da; sbb += db * db; }
+  return sab / Math.sqrt(saa * sbb);
+}
+function degStats(deg){ let s = 0, s2 = 0, mx = 0; for (const k of deg){ s += k; s2 += k * k; if (k > mx) mx = k; } const n = deg.length; return { mean: s / n, k2: s2 / n, kappa: (s2 / n) / Math.pow(s / n, 2), max: mx }; }
+
+/* ---------- theme helpers ---------- */
+let C = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  ["ink","muted","grid","grid-minor","er","sf","hub","node","path","edge","sheet"].forEach(k => C[k] = cs.getPropertyValue("--" + k).trim());
+}
+readColors();
+function setup(cv){
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+const bodyFont = () => getComputedStyle(document.body).fontFamily;
+
+/* ---------- charting ---------- */
+const SUP = { "-":"⁻", "0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹" };
+function fmtLog(v){
+  const e = Math.round(Math.log10(v));
+  if (Math.abs(Math.log10(v) - e) > 1e-9) return String(+v.toPrecision(2));
+  if (e >= 0 && e <= 4) return Math.pow(10, e).toLocaleString("en-US");
+  return "10" + String(e).split("").map(c => SUP[c]).join("");
+}
+function niceStep(range, n){
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / p;
+  return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * p;
+}
+function makeAxis(a, p0, p1){
+  const tf = a.log ? Math.log10 : v => v;
+  const t0 = tf(a.min), t1 = tf(a.max);
+  const f = v => p0 + (tf(v) - t0) / (t1 - t0) * (p1 - p0);
+  const major = [], minor = [];
+  if (a.log){
+    for (let e = Math.floor(t0); e <= Math.ceil(t1); e++){
+      const base = Math.pow(10, e);
+      if (base >= a.min * 0.999 && base <= a.max * 1.001) major.push(base);
+      if (t1 - t0 <= 6) for (let m = 2; m <= 9; m++){ const v = m * base; if (v > a.min && v < a.max) minor.push(v); }
+    }
+    const step = Math.ceil(major.length / 7);
+    f.major = major.filter((_, i) => i % step === 0);
+    f.fmt = a.fmt || fmtLog;
+  } else {
+    const st = niceStep(a.max - a.min, a.n || 5);
+    for (let v = Math.ceil(a.min / st) * st; v <= a.max + 1e-9; v += st) major.push(+v.toPrecision(10));
+    f.major = major; f.fmt = a.fmt || (v => v.toLocaleString("en-US"));
+  }
+  f.minor = minor; f.min = a.min; f.max = a.max;
+  return f;
+}
+// axis labels: text between asterisks is set as an italic math variable, the rest upright
+function richText(ctx, s, x, y){
+  const parts = String(s).split("*"), fonts = parts.map((_, i) => i % 2 ? "italic 15px 'Times New Roman', Times, serif" : "13px " + bodyFont());
+  let w = 0; parts.forEach((p, i) => { ctx.font = fonts[i]; w += ctx.measureText(p).width; });
+  let cx = x - w / 2; ctx.textAlign = "left";
+  parts.forEach((p, i) => { ctx.font = fonts[i]; ctx.fillText(p, cx, y); cx += ctx.measureText(p).width; });
+}
+function plot(cv, o){
+  const { ctx, w, h } = setup(cv);
+  const pad = Object.assign({ l: 56, r: 24, t: 12, b: o.x.label ? 46 : 28 }, o.pad || {});
+  ctx.font = "12px " + bodyFont();
+  if (!o.y.hideTicks && !(o.pad && o.pad.l)){ const Y0 = makeAxis(o.y, 1, 0); pad.l = Math.max(pad.l, 34 + Math.max(...Y0.major.map(v => ctx.measureText(Y0.fmt(v)).width))); }
+  const X = makeAxis(o.x, pad.l, w - pad.r), Y = makeAxis(o.y, h - pad.b, pad.t);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = C["grid-minor"];
+  ctx.beginPath();
+  X.minor.forEach(v => { const x = Math.round(X(v)) + .5; ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); });
+  Y.minor.forEach(v => { const y = Math.round(Y(v)) + .5; ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); });
+  ctx.stroke();
+  ctx.strokeStyle = C.grid;
+  ctx.beginPath();
+  X.major.forEach(v => { const x = Math.round(X(v)) + .5; ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); });
+  Y.major.forEach(v => { const y = Math.round(Y(v)) + .5; ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); });
+  ctx.stroke();
+  ctx.fillStyle = C.muted; ctx.font = "12px " + bodyFont();
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  if (!o.x.hideTicks) X.major.forEach(v => ctx.fillText(X.fmt(v), X(v), h - pad.b + 6));
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  if (!o.y.hideTicks) Y.major.forEach(v => ctx.fillText(Y.fmt(v), pad.l - 6, Y(v)));
+  ctx.textBaseline = "bottom"; ctx.fillStyle = C.ink;
+  if (o.x.label) richText(ctx, o.x.label, (pad.l + w - pad.r) / 2, h - 4);
+  if (o.y.label){ ctx.save(); ctx.translate(14, (pad.t + h - pad.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle"; richText(ctx, o.y.label, 0, 0); ctx.restore(); }
+  ctx.save();
+  ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
+  const ok = (x, y) => isFinite(x) && isFinite(y) && (!o.x.log || x > 0) && (!o.y.log || y > 0);
+  for (const s of o.series){
+    const col = C[s.color] || s.color;
+    if (s.type === "line"){
+      ctx.strokeStyle = col; ctx.lineWidth = s.width || 2.2; ctx.setLineDash(s.dash ? [6, 5] : []);
+      ctx.lineJoin = "round"; ctx.beginPath(); let pen = false;
+      for (const [x, y] of s.pts){
+        if (!ok(x, y)){ pen = false; continue; }
+        const px = X(x), py = Math.max(-1e4, Math.min(1e4, Y(y)));
+        pen ? ctx.lineTo(px, py) : ctx.moveTo(px, py); pen = true;
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    } else if (s.type === "bars"){
+      ctx.fillStyle = col; ctx.globalAlpha = s.alpha || 1;
+      for (const [x0, x1, y] of s.pts){ if (y <= 0) continue; const a = X(x0), b = X(x1); ctx.fillRect(a + 1, Y(y), Math.max(1, b - a - 2), Y(o.y.min) - Y(y)); }
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = col; ctx.globalAlpha = s.alpha || 1;
+      const r = s.r || 3;
+      for (const [x, y] of s.pts){
+        if (!ok(x, y)) continue;
+        ctx.beginPath();
+        if (s.shape === "diamond"){ const px = X(x), py = Y(y); ctx.moveTo(px, py - r * 1.25); ctx.lineTo(px + r, py); ctx.lineTo(px, py + r * 1.25); ctx.lineTo(px - r, py); }
+        else ctx.arc(X(x), Y(y), r, 0, 7);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+  if (o.after) o.after(ctx, X, Y, w, h, pad);
+}
+
+/* ---------- hero ---------- */
+const tip = $("tip");
+const MEASURES = { deg: "연결선수 k", clo: "근접 중심도 g̃", btw: "사이 중심도 b̃" };
+const hero = { g: null, vals: {}, ranks: {}, measure: "deg", sel: -1, hover: -1, hl: -1 };
+const valStr = (m, v) => m === "deg" ? String(v) : v.toFixed(3);
+
+class HeroView{
+  constructor(cv){ this.cv = cv; this.raf = 0;
+    const pick = (e, click) => {
+      const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      let best = -1, bd = 196;
+      if (this.sx) for (let i = 0; i < hero.g.N; i++){ const dx = this.sx[i] - mx, dy = this.sy[i] - my, d = dx * dx + dy * dy; if (d < bd){ bd = d; best = i; } }
+      if (click){ hero.sel = best; renderPanel(); }
+      if (best !== hero.hover || click){ hero.hover = best; this.draw(); }
+      if (best >= 0){ tip.textContent = `노드 ${best + 1}: k = ${hero.vals.deg[best]}, g̃ = ${hero.vals.clo[best].toFixed(3)}, b̃ = ${hero.vals.btw[best].toFixed(3)}`; tip.style.left = Math.min(e.clientX + 12, innerWidth - 260) + "px"; tip.style.top = (e.clientY - 30) + "px"; tip.style.opacity = 1; }
+      else tip.style.opacity = 0;
+    };
+    cv.addEventListener("pointermove", e => pick(e, false));
+    cv.addEventListener("pointerdown", e => pick(e, true));
+    cv.addEventListener("pointerleave", () => { hero.hover = -1; tip.style.opacity = 0; this.draw(); });
+  }
+  set(g){
+    cancelAnimationFrame(this.raf);
+    const N = g.N; this.N = N; this.x = new Float32Array(N); this.y = new Float32Array(N); this.vx = new Float32Array(N); this.vy = new Float32Array(N);
+    for (let i = 0; i < N; i++){ const a = Math.random() * 6.283, r = 60 * Math.sqrt(Math.random()); this.x[i] = r * Math.cos(a); this.y[i] = r * Math.sin(a); }
+    this.alpha = 1;
+    if (reduceMotion){ while (this.alpha > 0.02) this.tick(); this.draw(); }
+    else this.loop();
+  }
+  loop(){ for (let i = 0; i < 2; i++) this.tick(); this.draw(); if (this.alpha > 0.02) this.raf = requestAnimationFrame(() => this.loop()); }
+  tick(){ forceTick(hero.g, this, 22); this.alpha *= 0.985; }
+  draw(){
+    const g = hero.g; if (!g || !this.x) return;
+    const { ctx, w, h } = setup(this.cv);
+    const N = g.N, { x, y } = this;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i < N; i++){ x0 = Math.min(x0, x[i]); x1 = Math.max(x1, x[i]); y0 = Math.min(y0, y[i]); y1 = Math.max(y1, y[i]); }
+    const m = 26, sc = Math.min((w - 2 * m) / (x1 - x0 || 1), (h - 2 * m) / (y1 - y0 || 1));
+    const ox = (w - (x1 - x0) * sc) / 2, oy = (h - (y1 - y0) * sc) / 2;
+    if (!this.sx || this.sx.length !== N){ this.sx = new Float32Array(N); this.sy = new Float32Array(N); }
+    for (let i = 0; i < N; i++){ this.sx[i] = ox + (x[i] - x0) * sc; this.sy[i] = oy + (y[i] - y0) * sc; }
+    const sx = this.sx, sy = this.sy, E = g.edges;
+    const focus = hero.hl >= 0 ? hero.hl : hero.hover >= 0 ? hero.hover : hero.sel;
+    ctx.lineWidth = 1; ctx.strokeStyle = C.edge; ctx.beginPath();
+    for (let e = 0; e < E.length; e += 2){ ctx.moveTo(sx[E[e]], sy[E[e]]); ctx.lineTo(sx[E[e + 1]], sy[E[e + 1]]); }
+    ctx.stroke();
+    const nb = new Set();
+    if (focus >= 0){
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.6; ctx.beginPath();
+      for (let p = g.off[focus]; p < g.off[focus + 1]; p++){ const u = g.nbr[p]; nb.add(u); ctx.moveTo(sx[focus], sy[focus]); ctx.lineTo(sx[u], sy[u]); }
+      ctx.stroke();
+    }
+    const vals = hero.vals[hero.measure], R = hero.ranks[hero.measure];
+    let mx = 0; for (let i = 0; i < N; i++) mx = Math.max(mx, vals[i]);
+    const base = Math.max(0.75, Math.min(1.35, w / 440));
+    const top = R.idx.slice(0, 5);
+    const order = Array.from({ length: N }, (_, i) => i).sort((a, b) => vals[a] - vals[b]);
+    for (const i of order){
+      const f = mx > 0 ? vals[i] / mx : 0, r = (2.6 + 10 * Math.sqrt(f)) * base, isTop = top.includes(i);
+      ctx.beginPath(); ctx.arc(sx[i], sy[i], r, 0, 7);
+      ctx.globalAlpha = focus >= 0 && i !== focus && !nb.has(i) ? 0.25 : 1;
+      ctx.fillStyle = C.sheet; ctx.fill();
+      ctx.fillStyle = isTop ? C.hub : C.node; ctx.globalAlpha *= isTop ? 1 : 0.3 + 0.7 * f; ctx.fill();
+      ctx.globalAlpha = 1;
+      if (i === focus){ ctx.lineWidth = 2.2; ctx.strokeStyle = C.ink; ctx.stroke(); }
+    }
+    ctx.font = "600 13px " + bodyFont(); ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    top.forEach((i, k) => {
+      const f = mx > 0 ? vals[i] / mx : 0, r = (2.6 + 10 * Math.sqrt(f)) * base;
+      ctx.lineWidth = 3; ctx.strokeStyle = C.sheet; ctx.strokeText(String(k + 1), sx[i] + r + 3, sy[i] - r * 0.6);
+      ctx.fillStyle = C.hub; ctx.fillText(String(k + 1), sx[i] + r + 3, sy[i] - r * 0.6);
+    });
+  }
+}
+function forceTick(g, s, L){
+  const { x, y, vx, vy } = s, N = g.N, a = s.alpha, rep = 220;
+  for (let i = 0; i < N; i++){
+    for (let j = i + 1; j < N; j++){
+      let dx = x[i] - x[j], dy = y[i] - y[j]; const d2 = dx * dx + dy * dy + 0.01;
+      if (d2 > 10000) continue;
+      const d = Math.sqrt(d2), f = rep / d2 * a / d;
+      dx *= f; dy *= f; vx[i] += dx; vy[i] += dy; vx[j] -= dx; vy[j] -= dy;
+    }
+  }
+  const E = g.edges;
+  for (let e = 0; e < E.length; e += 2){
+    const i = E[e], j = E[e + 1];
+    const dx = x[j] - x[i], dy = y[j] - y[i], d = Math.sqrt(dx * dx + dy * dy) + 0.01;
+    const k = (d - L) / d * 0.08 * a / Math.sqrt(Math.min(g.deg[i], g.deg[j]));
+    vx[i] += dx * k; vy[i] += dy * k; vx[j] -= dx * k; vy[j] -= dy * k;
+  }
+  for (let i = 0; i < N; i++){
+    vx[i] -= x[i] * 0.004 * a; vy[i] -= y[i] * 0.004 * a;
+    vx[i] *= 0.6; vy[i] *= 0.6; x[i] += vx[i]; y[i] += vy[i];
+  }
+}
+const heroView = new HeroView($("heroCv"));
+
+function regenHero(){
+  const t = $("heroNet").value;
+  const g = largestComponent(t === "hub" ? genHubSpoke() : t === "two" ? genTwo() : t === "sf" ? genBA(150, 2) : genER(150, 4));
+  hero.g = g; hero.sel = -1; hero.hover = -1; hero.hl = -1;
+  const c = closeness(g), b = brandes(g, false), norm = (g.N - 1) * (g.N - 2) / 2;
+  hero.vals = { deg: Array.from(g.deg), clo: Array.from(c.norm), btw: Array.from(b.b, v => v / norm) };
+  for (const m in hero.vals) hero.ranks[m] = ranksOf(hero.vals[m]);
+  heroView.set(g);
+  renderPanel();
+  drawHist();
+}
+function renderPanel(){
+  const ms = ["deg", "clo", "btw"];
+  let html = "<thead><tr><th>#</th>" + ms.map(m => `<th class="${m === hero.measure ? "cur" : ""}">${MEASURES[m]}</th>`).join("") + "</tr></thead><tbody>";
+  for (let r = 0; r < 5; r++){
+    html += `<tr><td>${r + 1}</td>` + ms.map(m => { const i = hero.ranks[m].idx[r]; return `<td><button type="button" class="nodebtn${i === hero.sel ? " on" : ""}" data-n="${i}" aria-label="노드 ${i + 1}">${i + 1}</button><span class="val">${valStr(m, hero.vals[m][i])}</span></td>`; }).join("") + "</tr>";
+  }
+  $("ranks").innerHTML = html + "</tbody>";
+  const s = hero.sel, N = hero.g.N;
+  $("detail").innerHTML = s < 0 ? `<span style="color:var(--muted)">이 네트워크에는 노드가 ${N}개 있습니다. 노드를 고르면 세 순위를 비교합니다.</span>` :
+    `<b>노드 ${s + 1}</b>: k = <b>${hero.vals.deg[s]}</b> (${N}개 중 ${hero.ranks.deg.rank[s]}위), g̃ = <b>${hero.vals.clo[s].toFixed(3)}</b> (${hero.ranks.clo.rank[s]}위), b̃ = <b>${hero.vals.btw[s].toFixed(3)}</b> (${hero.ranks.btw.rank[s]}위).`;
+  const tops = ms.map(m => new Set(hero.ranks[m].idx.slice(0, 5)));
+  const shared = [...tops[0]].filter(i => tops[1].has(i) && tops[2].has(i)).length;
+  const t1 = ms.map(m => hero.ranks[m].idx[0]);
+  const sameTop = t1[0] === t1[1] && t1[1] === t1[2];
+  $("agree").innerHTML = (sameTop ? `세 척도 모두 노드 <span class="num">${t1[0] + 1}</span>을 1등으로 꼽습니다.` : `가장 중심인 노드는 연결선수로는 <span class="num">${t1[0] + 1}</span>, 근접 중심도로는 <span class="num">${t1[1] + 1}</span>, 사이 중심도로는 <span class="num">${t1[2] + 1}</span>입니다.`) +
+    ` ${shared === 5 ? "Their top fives are identical." : shared === 0 ? "No node makes all three top fives." : `${shared} of 5 nodes appear in all three top fives.`}`;
+}
+$("ranks").addEventListener("click", e => { const b = e.target.closest("[data-n]"); if (!b) return; const n = +b.dataset.n; hero.sel = hero.sel === n ? -1 : n; renderPanel(); heroView.draw(); });
+$("ranks").addEventListener("pointerover", e => { const b = e.target.closest("[data-n]"); hero.hl = b ? +b.dataset.n : -1; heroView.draw(); });
+$("ranks").addEventListener("pointerleave", () => { hero.hl = -1; heroView.draw(); });
+document.querySelectorAll('input[name="measure"]').forEach(r => r.addEventListener("change", e => { hero.measure = e.target.value; renderPanel(); heroView.draw(); drawHist(); }));
+$("heroNet").addEventListener("change", regenHero);
+$("regen").addEventListener("click", regenHero);
+
+/* ---------- small SVG graphs ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function makeSmall(svg, pos, edgeList, onPick, onEdge){
+  const N = pos.length, flat = []; edgeList.forEach(([a, b]) => flat.push(a, b));
+  const g = build(N, flat);
+  const act = e => { const n = e.target.closest("[data-n]"); if (n) return onPick(+n.dataset.n); const l = e.target.closest("[data-e]"); if (l && onEdge) onEdge(+l.dataset.e); };
+  svg.addEventListener("click", act);
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ const t = e.target.closest("[data-n],[data-e]"); if (t){ e.preventDefault(); act(e); } } });
+  return { g, pos, render(o){
+    const fa = document.activeElement, focused = fa && svg.contains(fa) ? (fa.dataset.n !== undefined ? `[data-n="${fa.dataset.n}"]` : `[data-e="${fa.dataset.e}"]`) : null;
+    svg.textContent = "";
+    const eg = svgEl("g", {}, svg);
+    edgeList.forEach(([a, b], e) => {
+      svgEl("line", { x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: `stroke:${o.edgeColor ? o.edgeColor(e) : "var(--muted)"};stroke-width:${o.edgeWidth ? o.edgeWidth(e) : 2};stroke-linecap:round;stroke-opacity:${o.edgeOpacity ? o.edgeOpacity(e) : .55}${o.edgeDash && o.edgeDash(e) ? ";stroke-dasharray:6 6" : ""}` }, eg);
+    });
+    if (o.edgeHit) edgeList.forEach(([a, b], e) => {
+      svgEl("line", { "data-e": e, tabindex: 0, role: "button", "aria-label": o.edgeAria ? o.edgeAria(e) : `링크 ${a + 1}–${b + 1}`, class: "hit", x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], style: "stroke:transparent;stroke-width:14;cursor:pointer" }, eg);
+    });
+    if (o.edgeLabel) edgeList.forEach(([a, b], e) => { const t = o.edgeLabel(e); if (!t) return;
+      const mx = (pos[a][0] + pos[b][0]) / 2, my = (pos[a][1] + pos[b][1]) / 2;
+      const tx = svgEl("text", { x: mx, y: my - 10, "text-anchor": "middle", style: `fill:${o.edgeLabelColor ? o.edgeLabelColor(e) : "var(--path)"};font:700 14px var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px` }, svg); tx.textContent = t; });
+    for (let i = 0; i < N; i++){
+      const r = o.r ? o.r(i) : 18;
+      const ng = svgEl("g", { "data-n": i, tabindex: 0, role: "button", "aria-label": o.aria ? o.aria(i) : `노드 ${i + 1}` }, svg);
+      svgEl("circle", { class: "hit", cx: pos[i][0], cy: pos[i][1], r: r + 6, style: "fill:transparent" }, ng);
+      if (o.halo){ const hc = o.halo(i); if (hc) svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r + 6, style: `fill:none;stroke:${hc};stroke-width:3.5;stroke-opacity:.6;pointer-events:none` }, ng); }
+      svgEl("circle", { class: "body", cx: pos[i][0], cy: pos[i][1], r, style: `fill:var(--sheet);stroke:${o.stroke ? o.stroke(i) : "var(--ink)"};stroke-width:${o.strokeW ? o.strokeW(i) : 2.5}` }, ng);
+      if (o.fill){ const [col, op] = o.fill(i); svgEl("circle", { cx: pos[i][0], cy: pos[i][1], r: r - 1, style: `fill:${col};fill-opacity:${op};pointer-events:none` }, ng); }
+      if (o.inner){ const [t, col] = o.inner(i); if (t !== ""){ const fs = o.innerSize ? o.innerSize(i) : r > 14 ? 16 : 12; const tx = svgEl("text", { x: pos[i][0], y: pos[i][1] + 1, "text-anchor": "middle", "dominant-baseline": "middle", style: `fill:${col || "var(--ink)"};font:600 ${fs}px var(--body);pointer-events:none` }, ng); tx.textContent = t; } }
+      if (o.outer){ const t = o.outer(i); if (t){ const [dx, dy] = o.outerAt ? o.outerAt(i) : [0, -r - 9];
+        const tx = svgEl("text", { x: pos[i][0] + dx, y: pos[i][1] + dy, "text-anchor": "middle", style: `fill:${o.outerColor ? o.outerColor(i) : "var(--muted)"};font:${o.outerColor ? "700 15px" : "13px"} var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px` }, ng); tx.textContent = t; } }
+    }
+    if (o.badge) for (let i = 0; i < N; i++){ const t = o.badge(i); if (!t) continue; const r = o.r ? o.r(i) : 18;
+      const tx = svgEl("text", { x: pos[i][0] + r + 3, y: pos[i][1] - r + 2, style: `fill:${o.badgeColor ? o.badgeColor(i) : "var(--path)"};font:700 14px var(--body);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:4px` }, svg); tx.textContent = t; }
+    if (focused){ const el = svg.querySelector(focused); if (el) el.focus({ preventScroll: true }); }
+  } };
+}
+
+/* ---------- shortest paths shared by both explorers ---------- */
+function allPairsSP(g){
+  const D = [], S = [];
+  for (let s = 0; s < g.N; s++){ const r = bfs(g, s); D.push(r.dist); S.push(r.sig); }
+  return { D, S };
+}
+function listPaths(g, D, s, t, limit = 40){
+  const out = [];
+  const walk = (v, tail) => {
+    if (out.length >= limit) return;
+    if (v === s){ out.push([s, ...tail]); return; }
+    for (let p = g.off[v]; p < g.off[v + 1]; p++){ const u = g.nbr[p]; if (D[s][u] === D[s][v] - 1) walk(u, [v, ...tail]); }
+  };
+  walk(t, []);
+  return out;
+}
+const pairKey = (a, b) => a < b ? a + "-" + b : b + "-" + a;
+function shareStr(r){
+  if (Math.abs(r - 1) < 1e-9) return "+1";
+  for (let d = 2; d <= 24; d++){ const n = Math.round(r * d); if (Math.abs(r * d - n) < 1e-9) return `+${n}/${d}`; }
+  return "+" + r.toFixed(2);
+}
+const shareTex = r => { const s = shareStr(r).slice(1); return s.includes("/") ? `\\tfrac{${s.split("/")[0]}}{${s.split("/")[1]}}` : s; };
+
+/* ---------- closeness explorer ---------- */
+const cloPos = [[223,44],[64,100],[226,162],[353,236],[430,120],[526,194],[474,330]];
+const cloEdges = [[0,1],[0,2],[1,2],[2,3],[2,5],[3,4],[3,6],[4,5],[4,6],[5,6]];
+const outerAt = [[0,-30],[-34,-20],[-40,22],[-30,30],[0,-30],[36,-22],[0,36]];
+let cloSel = 2, cloTgt = -1;
+const clo = makeSmall($("cloSvg"), cloPos, cloEdges, i => { if (i === cloSel) return; cloSel = i; cloTgt = -1; drawClo(); });
+const cloSP = allPairsSP(clo.g);
+function drawClo(){
+  const g = clo.g, N = g.N, s = cloSel, d = cloSP.D[s], c = closeness(g).norm;
+  const paths = cloTgt >= 0 ? listPaths(g, cloSP.D, s, cloTgt) : [];
+  const pe = new Set(), pn = new Set();
+  paths.forEach(p => p.forEach((v, k) => { pn.add(v); if (k) pe.add(pairKey(p[k - 1], v)); }));
+  clo.render({
+    inner: i => i === s ? [String(i + 1), "#fff"] : [String(d[i]), i === cloTgt ? "#fff" : "var(--ink)"],
+    fill: i => i === s ? ["var(--hub)", 1] : i === cloTgt ? ["var(--path)", 1] : ["var(--node)", .12],
+    stroke: i => i === s ? "var(--hub)" : pn.has(i) ? "var(--path)" : "var(--ink)",
+    strokeW: i => pn.has(i) && i !== s ? 3.5 : 2.5,
+    outer: i => `${i === s ? "" : "node " + (i + 1) + ", "}k = ${g.deg[i]}`,
+    outerAt: i => outerAt[i],
+    edgeColor: e => { const [a, b] = cloEdges[e]; return pe.has(pairKey(a, b)) ? "var(--path)" : Math.abs(d[a] - d[b]) === 1 ? "var(--ink)" : "var(--muted)"; },
+    edgeWidth: e => pe.has(pairKey(...cloEdges[e])) ? 5 : 2,
+    edgeOpacity: e => pe.has(pairKey(...cloEdges[e])) ? 1 : .55,
+    aria: i => `노드 ${i + 1}, 연결선수 ${g.deg[i]}`
+  });
+  const terms = []; let sum = 0; for (let j = 0; j < N; j++) if (j !== s){ terms.push(d[j]); sum += d[j]; }
+  const S = s + 1;
+  setMath($("cloText"), String.raw`노드 ${S}에서: \(\sum_{j\neq ${S}} l_{${S}j} = ${terms.join(" + ")} = ${sum}\). 따라서 \(g_{${S}} = 1/${sum} = ${(1 / sum).toFixed(3)}\)이고 \(\tilde g_{${S}} = ${N - 1}/${sum}\) = <span class="num">${((N - 1) / sum).toFixed(3)}</span>입니다. 노드 ${S}는 평균적으로 나머지 노드에서 ${(sum / (N - 1)).toFixed(2)}걸음 떨어져 있습니다.`);
+  $("cloPaths").innerHTML = Array.from({ length: N }, (_, j) => j).filter(j => j !== s).map(j =>
+    `<button type="button" class="chip pick${j === cloTgt ? " on" : ""}" data-t="${j}">${j + 1}까지: ${d[j]}걸음</button>`).join("");
+  if (cloTgt < 0) setMath($("cloPathText"), "목적지를 고르면 그 최단 경로를 그립니다. 진한 링크들이 다음 노드로부터의 모든 최단 경로를 이룹니다: 노드 " + S + "; muted edges are on none.");
+  else {
+    const T = cloTgt + 1, ps = paths.map(p => p.map(v => v + 1).join(" → "));
+    setMath($("cloPathText"), String.raw`\(l_{${S},${T}} = ${d[cloTgt]}\). ${paths.length === 1 ? "유일한 최단 경로는" : `최단 경로가 ${paths.length}개 있습니다:`} ${ps.join(", ")}. 각 경로의 링크는 ${d[cloTgt]}개이므로, 이 항은 합에 ${d[cloTgt]}을 보탭니다.`);
+  }
+  const order = Array.from({ length: N }, (_, i) => i).sort((a, b) => c[b] - c[a] || a - b);
+  $("cloChips").innerHTML = order.map(i => `<span class="chip${i === s ? " on" : ""}">노드 ${i + 1}: ${c[i].toFixed(3)}</span>`).join("");
+}
+$("cloPaths").addEventListener("click", e => { const b = e.target.closest("[data-t]"); if (!b) return; const t = +b.dataset.t; cloTgt = cloTgt === t ? -1 : t; drawClo(); const nb = $("cloPaths").querySelector(`[data-t="${t}"]`); if (nb) nb.focus({ preventScroll: true }); });
+$("cloNext").addEventListener("click", () => { const N = clo.g.N; let t = cloTgt; do { t = (t + 1) % N; } while (t === cloSel); cloTgt = t; drawClo(); });
+
+/* ---------- raw vs rescaled closeness ---------- */
+let gScale = null, gToken = 0;
+async function runGScale(){
+  const tok = ++gToken, Ns = [30, 100, 300, 1000, 3000, 10000, 30000];
+  gScale = { er: [], sf: [] };
+  for (const N of Ns){
+    $("gStatus").textContent = `N = ${N.toLocaleString("en-US")} 재는 중…`;
+    await pause(); if (tok !== gToken) return;
+    const sf = genBA(N, 2), er = largestComponent(genER(N, 4));
+    const meas = g => { let raw = 0, nrm = 0; const S = Math.min(40, g.N);
+      for (let s = 0; s < S; s++){ const d = bfs(g, rnd(g.N)).dist; let sum = 0; for (let j = 0; j < g.N; j++) if (d[j] > 0) sum += d[j]; raw += 1 / sum; nrm += (g.N - 1) / sum; }
+      return [raw / S, nrm / S]; };
+    const a = meas(sf), b = meas(er);
+    gScale.sf.push([N, ...a]); gScale.er.push([N, ...b]);
+    drawGScale();
+  }
+  $("gStatus").textContent = "네트워크마다 무작위로 고른 노드 40개에 대한 평균.";
+}
+function drawGScale(){
+  if (!gScale || !gScale.sf.length) return;
+  const xs = { log: true, min: 30, max: 30000, label: "네트워크 크기 *N*" };
+  plot($("gRawCv"), { x: xs, y: { log: true, min: 1e-6, max: 1, label: "평균 *g*" },
+    series: [
+      { type: "line", pts: [[30, 1 / 30], [30000, 1 / 30000]], color: "muted", dash: true, width: 1.4 },
+      { type: "line", pts: gScale.er.map(p => [p[0], p[1]]), color: "er" }, { type: "dots", pts: gScale.er.map(p => [p[0], p[1]]), color: "er", r: 3.5 },
+      { type: "line", pts: gScale.sf.map(p => [p[0], p[1]]), color: "sf" }, { type: "dots", pts: gScale.sf.map(p => [p[0], p[1]]), color: "sf", r: 3.5 }
+    ] });
+  plot($("gNormCv"), { x: xs, y: { min: 0, max: 1, label: "평균 *g̃*" },
+    series: [
+      { type: "line", pts: gScale.er.map(p => [p[0], p[2]]), color: "er" }, { type: "dots", pts: gScale.er.map(p => [p[0], p[2]]), color: "er", r: 3.5 },
+      { type: "line", pts: gScale.sf.map(p => [p[0], p[2]]), color: "sf" }, { type: "dots", pts: gScale.sf.map(p => [p[0], p[2]]), color: "sf", r: 3.5 }
+    ] });
+}
+
+/* ---------- betweenness explorer ---------- */
+const btw = (() => {
+  // a dense group, a wheel around one node, a short tree, and one broker linking them (as in the lecture figure)
+  const S = EdgeSet(40), R = 12;
+  seeded(7, () => {
+    const right = Array.from({ length: R }, (_, i) => i);
+    for (let i = 0; i < R; i++) for (let j = i + 1; j < R; j++) if (RNG() < .42) S.add(i, j);
+    for (let i = 1; i < R; i++) S.add(i, rnd(i));
+  });
+  const W0 = R, rim = 9;            // wheel: centre W0, rim W0+1..W0+9
+  for (let i = 1; i <= rim; i++){ S.add(W0, W0 + i); S.add(W0 + i, W0 + 1 + (i % rim)); }
+  const B = W0 + rim + 1;           // broker
+  S.add(B, 0); S.add(B, W0 + 2);
+  const T = B + 1;                  // tree
+  S.add(B, T); S.add(T, T + 1); S.add(T, T + 2); S.add(T, T + 3);
+  const N = T + 4;
+  const pairs = []; for (let i = 0; i < S.e.length; i += 2) pairs.push([S.e[i], S.e[i + 1]]);
+  // layout: seeded force simulation, then fit to the view box
+  const g = build(N, S.e), st = { x: new Float32Array(N), y: new Float32Array(N), vx: new Float32Array(N), vy: new Float32Array(N), alpha: 1 };
+  seeded(3, () => { for (let i = 0; i < N; i++){ st.x[i] = (RNG() - .5) * 120; st.y[i] = (RNG() - .5) * 120; } });
+  for (let i = 0; i < R; i++) st.x[i] += 80; for (let i = W0; i < B; i++){ st.x[i] -= 60; st.y[i] += 50; } for (let i = T; i < N; i++){ st.x[i] -= 60; st.y[i] -= 60; }
+  for (let it = 0; it < 600; it++){ forceTick(g, st, 30); st.alpha = Math.max(.02, st.alpha * .992); }
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (let i = 0; i < N; i++){ x0 = Math.min(x0, st.x[i]); x1 = Math.max(x1, st.x[i]); y0 = Math.min(y0, st.y[i]); y1 = Math.max(y1, st.y[i]); }
+  // stretch each axis to fill the box: a schematic, so a little distortion buys legibility
+  const pos = Array.from({ length: N }, (_, i) => [40 + (st.x[i] - x0) / (x1 - x0) * 680, 40 + (st.y[i] - y0) / (y1 - y0) * 360]);
+  return { pos, pairs };
+})();
+let bSel = [], bMode = "node", bPick = "pair", bFocus = -1, bStep = 0, bTimer = 0, bPathIdx = -1, bPathKey = "";
+const bView = makeSmall($("btwSvg"), btw.pos, btw.pairs, i => bClickNode(i), e => bClickEdge(e));
+const bAll = brandes(bView.g, true), bSP = allPairsSP(bView.g);
+let bList = [];
+function bClickNode(i){
+  if (bPick === "pair"){ if (bSel.length === 1 && bSel[0] === i) bSel = []; else if (bSel.length >= 2) bSel = [i]; else bSel.push(i); }
+  else if (bPick === "node"){ if (bFocus === i) return; bFocus = i; bStep = 0; bBuild(); }
+  drawBtw();
+}
+function bClickEdge(e){ if (bPick !== "edge" || bFocus === e) return; bFocus = e; bStep = 0; bBuild(); drawBtw(); }
+// σ_hj(x)/σ_hj for a node x or a link x, from the all-pairs distances and path counts
+function bShare(h, j, x, kind){
+  const D = bSP.D, S = bSP.S, L = D[h][j];
+  if (kind === "node") return D[h][x] + D[x][j] === L ? S[h][x] * S[x][j] / S[h][j] : 0;
+  const [u, v] = btw.pairs[x];
+  let c = 0;
+  if (D[h][u] + 1 + D[v][j] === L) c += S[h][u] * S[v][j];
+  if (D[h][v] + 1 + D[u][j] === L) c += S[h][v] * S[u][j];
+  return c / S[h][j];
+}
+function bBuild(){
+  bList = []; if (bFocus < 0) return;
+  const N = bView.g.N, zero = $("bZero").checked; let run = 0;
+  for (let h = 0; h < N; h++) for (let j = h + 1; j < N; j++){
+    if (bPick === "node" && (h === bFocus || j === bFocus)) continue;
+    const s = bShare(h, j, bFocus, bPick); run += s;
+    if (s > 0 || zero) bList.push({ h, j, s, run, sig: bSP.S[h][j], L: bSP.D[h][j] });
+  }
+  $("bStep").max = Math.max(0, bList.length - 1);
+  $("bList").innerHTML = `<table><thead><tr><th>단계</th><th>쌍 \\(h, j\\)</th><th>길이</th><th>\\(\\sigma_{hj}\\)</th><th>지나는 수</th><th>몫</th><th>누적 합</th></tr></thead><tbody>` +
+    bList.map((r, n) => `<tr data-s="${n}"><td>${n + 1}</td><td>${r.h + 1}, ${r.j + 1}</td><td>${r.L}</td><td${r.sig > 1 ? ' class="multi" title="동률인 여러 최단 경로"' : ""}>${r.sig}</td><td>${+(r.s * r.sig).toFixed(3)}</td><td>${r.s ? shareStr(r.s).slice(1) : "0"}</td><td>${+r.run.toFixed(3)}</td></tr>`).join("") + `</tbody></table>`;
+  typeset($("bList"));
+}
+function bPair(){
+  if (bPick === "pair") return bSel.length === 2 ? bSel : null;
+  if (bFocus < 0 || !bList.length) return null;
+  const r = bList[Math.min(bStep, bList.length - 1)]; return [r.h, r.j];
+}
+function drawBtw(){
+  const g = bView.g, N = g.N, norm = (N - 1) * (N - 2) / 2;
+  const bmax = Math.max(...bAll.b), emax = Math.max(...bAll.eb);
+  const pr = bPair();
+  let onPath = null, share = null, onEdge = null, D = 0, sigma = 0, paths = [];
+  if (pr){
+    const [h, j] = pr; D = bSP.D[h][j]; sigma = bSP.S[h][j];
+    share = new Float64Array(N); onPath = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (bSP.D[h][i] + bSP.D[i][j] === D){ onPath[i] = 1; share[i] = bSP.S[h][i] * bSP.S[i][j] / sigma; }
+    onEdge = btw.pairs.map((_, e) => bShare(h, j, e, "edge") > 0);
+    paths = listPaths(g, bSP.D, h, j, 12);
+  }
+  const key = pr ? pr.join("-") : "";
+  if (key !== bPathKey){ bPathKey = key; bPathIdx = -1; }
+  if (bPathIdx >= paths.length) bPathIdx = -1;
+  const soloP = pr && sigma > 1 && bPathIdx >= 0 ? paths[bPathIdx] : null;
+  const soloE = soloP ? new Set(soloP.slice(1).map((v, k) => pairKey(soloP[k], v))) : null;
+  const inSolo = e => soloE && soloE.has(pairKey(...btw.pairs[e]));
+  const hj = pr || (bPick === "pair" ? bSel : []);
+  const nodeFocus = bPick === "node" && bFocus >= 0, edgeFocus = bPick === "edge" && bFocus >= 0;
+  const topE = bAll.eb.indexOf(emax);
+  bView.render({
+    r: i => bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11,
+    innerSize: i => (bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11) > 15 ? 13 : 10,
+    fill: i => hj.includes(i) ? ["var(--path)", 1] : nodeFocus && i === bFocus ? ["var(--hub)", 1] : bMode === "node" ? ["var(--node)", .12 + .88 * bAll.b[i] / bmax] : ["var(--node)", .25],
+    stroke: i => nodeFocus && i === bFocus ? "var(--hub)" : hj.includes(i) || (onPath && onPath[i]) ? "var(--path)" : "var(--ink)",
+    strokeW: i => nodeFocus && i === bFocus ? 4.5 : hj.includes(i) ? 3.5 : onPath && onPath[i] ? (soloP && !soloP.includes(i) ? 2 : 3.5) : 2,
+    halo: i => hj.includes(i) ? "var(--path)" : nodeFocus && i === bFocus ? "var(--hub)" : null,
+    inner: i => [String(i + 1), hj.includes(i) || (nodeFocus && i === bFocus) || (bMode === "node" && bAll.b[i] / bmax > .45) ? "#fff" : "var(--ink)"],
+    outer: i => hj[0] === i ? "h" : hj[1] === i ? "j" : "",
+    outerAt: i => { const r = bMode === "node" ? 10 + 13 * Math.sqrt(bAll.b[i] / bmax) : 11; return [0, -r - 12]; },
+    outerColor: () => "var(--path)",
+    badge: i => onPath && onPath[i] && !pr.includes(i) ? shareStr(share[i]) : "",
+    badgeColor: i => nodeFocus && i === bFocus ? "var(--hub)" : "var(--path)",
+    edgeHit: bPick === "edge",
+    edgeColor: e => edgeFocus && e === bFocus ? "var(--hub)" : onEdge && onEdge[e] ? "var(--path)" : bMode === "edge" && e === topE && !pr ? "var(--hub)" : "var(--muted)",
+    edgeWidth: e => (edgeFocus && e === bFocus ? 3 : 0) + (inSolo(e) ? 2 : 0) + (bMode === "edge" ? 1.5 + 11 * bAll.eb[e] / emax : onEdge && onEdge[e] ? 4 : 2),
+    edgeOpacity: e => (edgeFocus && e === bFocus) || inSolo(e) ? 1 : onEdge && onEdge[e] ? (soloE ? .4 : 1) : bMode === "edge" ? .35 + .65 * bAll.eb[e] / emax : .55,
+    edgeDash: e => soloE && onEdge && onEdge[e] && !inSolo(e) && !(edgeFocus && e === bFocus),
+    edgeLabel: e => edgeFocus && e === bFocus && pr ? shareStr(bShare(pr[0], pr[1], e, "edge")) : bMode === "edge" && e === topE && !pr && bPick === "pair" ? "bottleneck" : "",
+    edgeLabelColor: () => "var(--hub)",
+    edgeAria: e => `링크 ${btw.pairs[e][0] + 1}–${btw.pairs[e][1] + 1}, 링크 사이 중심도 ${bAll.eb[e].toFixed(1)}`,
+    aria: i => `노드 ${i + 1}, 사이 중심도 ${bAll.b[i].toFixed(1)}${hj[0] === i ? ", h로 고름" : hj[1] === i ? ", j로 고름" : ""}`
+  });
+  bPathbar(pr, D, sigma, paths);
+  const pathList = pr ? paths.map(p => p.map(v => v + 1).join("–")).join(", ") + (sigma > paths.length ? ", …" : "") : "";
+  let txt;
+  $("bWalk").hidden = bPick === "pair";
+  if (bPick === "pair"){
+    $("bHint").textContent = "두 노드 h와 j를 고르면 그 사이의 모든 최단 경로가 보입니다.";
+    if (pr){
+      const [h, j] = pr, mids = []; for (let i = 0; i < N; i++) if (onPath[i] && !pr.includes(i)) mids.push(i);
+      txt = D === 1 ? `노드 ${h + 1}과 ${j + 1}은 이웃이므로, 그 사이에 놓인 노드가 없어 아무도 점수를 얻지 못합니다.` :
+        (sigma > 1
+          ? String.raw`길이 ${D}인 <span class="multi">최단 경로 ${sigma}개가 동률</span>로 ${h + 1}과 ${j + 1}을 이으므로 \(\sigma_{hj} = ${sigma}\)입니다: ${pathList}. 각 경로가 점수의 \(1/${sigma}\)을 실어 나르므로, 일부 경로에만 놓인 노드는 그 비율만큼 받으며 옆에 적어 두었습니다.`
+          : String.raw`길이 ${D}인 최단 경로 정확히 하나가 ${h + 1}과 ${j + 1}을 이으므로 \(\sigma_{hj} = 1\)입니다: ${pathList}. 사이에 있는 각 노드가 1점씩 받습니다.`);
+    } else if (bMode === "node"){
+      const top = bAll.b.indexOf(bmax);
+      txt = String.raw`쌍 ${norm.toLocaleString("en-US")}개 전부를 더하면, 링크가 ${g.deg[top]}개뿐인데도 무리 사이의 중개자인 노드 ${top + 1}이 이깁니다: \(b_{${top + 1}} = ${bmax.toFixed(1)}\)이므로 \(\tilde b_{${top + 1}} = ${(bmax / norm).toFixed(2)}\)입니다. ${bSel.length === 1 ? `노드 ${bSel[0] + 1}이 h입니다. 이제 j를 고르세요.` : "h를 골라 경로를 시작하세요."}`;
+    } else {
+      txt = `빽빽한 무리를 나머지와 잇는 링크가 최단 경로 <span class="num">${emax.toFixed(0)}</span>개를 실어 나릅니다. 이런 링크는 흔히 커뮤니티를 잇기 때문에, 사이 중심도가 가장 높은 링크를 잘라 나가는 것이 커뮤니티를 찾는 한 방법입니다.`;
+    }
+  } else {
+    const kind = bPick === "node" ? "노드" : "링크";
+    $("bHint").textContent = bPick === "node" ? "사이 중심도를 합할 노드를 고르세요." : "링크 사이 중심도를 합할 링크를 고르세요.";
+    if (bFocus < 0) txt = `${kind}를 고르면 그것을 지나는 최단 경로를 가진 모든 노드 쌍을 보여 줍니다.`;
+    else {
+      const name = bPick === "node" ? `노드 ${bFocus + 1}` : `링크 ${btw.pairs[bFocus][0] + 1}–${btw.pairs[bFocus][1] + 1}`;
+      const sym = bPick === "node" ? `b_{${bFocus + 1}}` : `b_{(${btw.pairs[bFocus][0] + 1},${btw.pairs[bFocus][1] + 1})}`;
+      const total = bPick === "node" ? bAll.b[bFocus] : bAll.eb[bFocus];
+      const nz = bList.filter(r => r.s > 0).length;
+      if (!bList.length) txt = String.raw`다른 두 노드 사이의 어떤 최단 경로도 ${name}을 지나지 않으므로 \(${sym} = 0\)입니다.`;
+      else {
+        const r = bList[Math.min(bStep, bList.length - 1)], thr = +(r.s * r.sig).toFixed(3);
+        const how = r.sig > 1
+          ? String.raw`<span class="multi">최단 경로 ${r.sig}개가 동률</span>이고(\(\sigma_{hj} = ${r.sig}\), 길이 ${r.L}), 그중 ${thr}개가 ${name}을 지나`
+          : String.raw`최단 경로가 하나뿐이고(\(\sigma_{hj} = 1\), 길이 ${r.L}), 그 경로가 ${name}을 ${thr ? "지나" : "지나지 않아"}`;
+        txt = String.raw`${bList.length}쌍 중 ${bStep + 1}번째: \(h = ${r.h + 1},\ j = ${r.j + 1}\). ${how} \(${r.s ? shareTex(r.s) : "0"}\)을 보탭니다. 누적 합 <span class="num">${+r.run.toFixed(2)}</span> / \(${sym} = ${+total.toFixed(2)}\), ${nz}개 쌍에서.`;
+      }
+      $("bStepOut").textContent = bList.length ? `${bStep + 1} of ${bList.length}` : "none";
+      $("bStep").value = bStep;
+      const box = $("bList"), row = box.querySelector(`tr[data-s="${bStep}"]`);
+      box.querySelectorAll("tr.on").forEach(t => t.classList.remove("on"));
+      if (row){ row.classList.add("on"); const top = row.offsetTop - box.clientHeight / 2; box.scrollTop = Math.max(0, top); }
+    }
+  }
+  setMath($("btwText"), txt);
+}
+function bPathbar(pr, D, sigma, paths){
+  const bar = $("bPaths"), pill = (t, v) => `<span class="hj">${t} = ${v + 1}</span>`;
+  if (!pr){
+    bar.innerHTML = bPick !== "pair" ? "" : bSel.length === 1
+      ? `${pill("h", bSel[0])} <span>이제 j를 고르세요.</span> <span class="muted">${bSel[0] + 1}을 다시 클릭하면 되돌립니다.</span>`
+      : `<span class="muted">노드를 클릭해 h를 고르세요.</span>`;
+    return;
+  }
+  const [h, j] = pr, ends = `${pill("h", h)} ${pill("j", j)}`;
+  if (D === 1){ bar.innerHTML = `${ends} <span>이웃: 최단 경로 하나, 사이에 아무도 없음.</span>`; return; }
+  if (sigma === 1){ bar.innerHTML = `${ends} <span><b>최단 경로 하나</b>, 길이 ${D}: ${paths[0].map(v => v + 1).join("–")}</span>`; return; }
+  const chip = (p, t) => `<button type="button" class="chip pick${bPathIdx === p ? " on" : ""}" data-p="${p}" aria-pressed="${bPathIdx === p}">${t}</button>`;
+  bar.innerHTML = `${ends} <span class="multi">최단 경로 ${sigma}개</span><span>길이 ${D}, 동률.${sigma > paths.length ? ` 처음 ${paths.length}개만 보임.` : ""} 보기:</span>` +
+    `<span class="chips">${chip(-1, "All")}${paths.map((p, k) => chip(k, p.map(v => v + 1).join("–"))).join("")}</span>`;
+}
+$("bPaths").addEventListener("click", e => { const b = e.target.closest("button[data-p]"); if (!b) return; bPathIdx = +b.dataset.p; drawBtw(); const nb = $("bPaths").querySelector(`button[data-p="${bPathIdx}"]`); if (nb) nb.focus(); });
+function bStop(){ clearInterval(bTimer); bTimer = 0; $("bPlay").textContent = "재생"; }
+function bGo(n){ if (!bList.length) return; bStep = Math.max(0, Math.min(bList.length - 1, n)); drawBtw(); }
+document.querySelectorAll('input[name="bmode"]').forEach(r => r.addEventListener("change", e => { bMode = e.target.value; drawBtw(); }));
+document.querySelectorAll('input[name="bpick"]').forEach(r => r.addEventListener("change", e => {
+  bStop(); bPick = e.target.value; bFocus = -1; bSel = []; bList = []; bStep = 0;
+  if (bPick !== "pair"){ bMode = bPick; document.querySelector(`input[name="bmode"][value="${bMode}"]`).checked = true; }
+  $("bList").innerHTML = ""; drawBtw();
+}));
+$("bClear").addEventListener("click", () => { bStop(); bSel = []; bFocus = -1; bList = []; $("bList").innerHTML = ""; drawBtw(); });
+$("bPrev").addEventListener("click", () => { bStop(); bGo(bStep - 1); });
+$("bNext").addEventListener("click", () => { bStop(); bGo(bStep + 1); });
+$("bStep").addEventListener("input", e => { bStop(); bGo(+e.target.value); });
+$("bZero").addEventListener("change", () => { bStop(); bStep = 0; bBuild(); drawBtw(); });
+$("bList").addEventListener("click", e => { const t = e.target.closest("tr[data-s]"); if (t){ bStop(); bGo(+t.dataset.s); } });
+$("bPlay").addEventListener("click", () => {
+  if (bTimer){ bStop(); return; }
+  if (!bList.length) return;
+  if (bStep >= bList.length - 1) bStep = -1;
+  $("bPlay").textContent = "일시 정지";
+  bTimer = setInterval(() => { if (bStep >= bList.length - 1){ bStop(); return; } bGo(bStep + 1); }, 700);
+});
+
+/* ---------- Fig 3.1 pair ---------- */
+function figure(svgId, textId, pos, edges, labels, hl){
+  let sel = hl;
+  const v = makeSmall($(svgId), pos, edges, i => { sel = i; draw(); });
+  const bb = brandes(v.g, false).b;
+  function draw(){
+    v.render({ r: () => 14, fill: i => i === hl ? ["var(--path)", 1] : ["var(--sf)", .85], stroke: i => i === sel ? "var(--ink)" : i === hl ? "var(--path)" : "var(--sf)", strokeW: i => i === sel ? 4 : 2,
+      inner: i => [labels[i], "#fff"], edgeColor: () => "var(--ink)", edgeOpacity: () => .7, aria: i => labels[i] ? `노드 ${labels[i]}` : "이름 없는 노드" });
+    const sub = labels[sel] ? `_{${labels[sel]}}` : "";
+    setMath($(textId), `${labels[sel] ? "" : "이 노드: "}\\(k${sub} = ${v.g.deg[sel]},\\quad b${sub} = ${+bb[sel].toFixed(2)}\\)`);
+  }
+  draw();
+}
+figure("figA", "figAText", [[60,70],[80,160],[160,105],[180,30],[250,150]], [[0,3],[0,2],[0,1],[1,2],[2,3],[2,4]], ["1","2","3","4","5"], 2);
+figure("figB", "figBText",
+  [[40,90],[100,50],[110,140],[40,160],[230,40],[320,90],[300,165],[380,165],[410,60],[340,20]],
+  [[0,1],[0,2],[0,3],[1,2],[2,3],[1,4],[4,5],[5,6],[5,7],[5,8],[5,9],[8,9]],
+  ["1","","2","","3","","","","4",""], 4);
+
+/* ---------- degree vs betweenness ---------- */
+const cache = {};
+let corrToken = 0;
+async function runCorr(){
+  const tok = ++corrToken, t = $("corrNet").value;
+  $("corrStatus").textContent = "노드 2,000개의 사이 중심도 계산 중…";
+  await pause(); if (tok !== corrToken) return;
+  if (!cache["corr" + t]){
+    const g = largestComponent(t === "sf" ? genBA(2000, 2) : t === "er" ? genER(2000, 4) : genComm(40, 50, 6, 70));
+    const r = await brandesChunked(g, false, () => tok !== corrToken, f => { $("corrStatus").textContent = `노드 2,000개의 사이 중심도 계산 중… ${Math.round(f * 100)}%`; });
+    if (!r) return;
+    cache["corr" + t] = { g, b: r.b };
+  }
+  if (tok !== corrToken) return;
+  $("corrStatus").textContent = "";
+  drawCorr();
+}
+function drawCorr(){
+  const d = cache["corr" + $("corrNet").value]; if (!d) return;
+  const { g, b } = d, N = g.N, pts = [], byK = new Map();
+  for (let i = 0; i < N; i++){ if (b[i] > 0) pts.push([g.deg[i], b[i]]); const a = byK.get(g.deg[i]) || [0, 0]; a[0] += b[i]; a[1]++; byK.set(g.deg[i], a); }
+  const avg = [...byK.entries()].sort((a, b) => a[0] - b[0]).map(([k, a]) => [k, a[0] / a[1]]).filter(p => p[1] > 0);
+  const bs = Array.from(b).sort((a, b) => b - a), cut = bs[Math.floor(N * 0.01)], ks = Array.from(g.deg).sort((a, b) => a - b), kmed = ks[N >> 1];
+  const odd = []; for (let i = 0; i < N; i++) if (b[i] >= cut && g.deg[i] <= kmed) odd.push([g.deg[i], b[i]]);
+  const kmax = Math.max(...g.deg), bmax = Math.max(...b);
+  const rho = spearman(Array.from(g.deg), Array.from(b));
+  plot($("corrCv"), {
+    x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(kmax * 1.05))), label: "연결선수 *k*" },
+    y: { log: true, min: Math.pow(10, Math.floor(Math.log10(Math.min(...pts.map(p => p[1]))))), max: Math.pow(10, Math.ceil(Math.log10(bmax))), label: "사이 중심도 *b*" },
+    series: [
+      { type: "dots", pts: pts.map(([k, v]) => [k * (1 + (Math.random() - .5) * .12), v]), color: "node", r: 2.6, alpha: .35 },
+      { type: "line", pts: avg, color: "ink", width: 2 },
+      { type: "dots", pts: odd, color: "hub", r: 4 }
+    ]
+  });
+  const top = Array.from(b).indexOf(bmax), topRank = ranksOf(Array.from(g.deg)).rank[top];
+  setMath($("corrText"), `연결선수와 사이 중심도의 순위 상관: 스피어먼 \\(\\rho\\) = <span class="num">${rho.toFixed(2)}</span>. ` +
+    (odd.length ? `연결선수가 중앙값(${kmed}) 이하인 노드 ${odd.length}개가 그래도 사이 중심도 상위 1%에 듭니다.` : `연결선수가 중앙값(${kmed}) 이하인 노드 중 사이 중심도 상위 1%에 드는 것은 없습니다.`) +
+    ` 사이 중심도가 가장 높은 노드는 연결선수로는 ${topRank === 1 ? "1" : topRank}위입니다.`);
+}
+$("corrNet").addEventListener("change", runCorr);
+
+/* ---------- histogram of the hero network ---------- */
+function drawHist(){
+  if (!hero.g) return;
+  const m = hero.measure, v = hero.vals[m], N = v.length;
+  let bins;
+  if (m === "deg"){ const mx = Math.max(...v); bins = Array.from({ length: mx }, (_, i) => [i + .5, i + 1.5, 0]); v.forEach(k => bins[k - 1][2]++); }
+  else { const lo = m === "clo" ? Math.min(...v) : 0, hi = Math.max(...v), nb = 14, w = (hi - lo) / nb || 1;
+    bins = Array.from({ length: nb }, (_, i) => [lo + i * w, lo + (i + 1) * w, 0]); v.forEach(x => bins[Math.min(nb - 1, Math.floor((x - lo) / w))][2]++); }
+  const nmax = Math.max(...bins.map(b => b[2]));
+  const sym = m === "deg" ? "k" : m === "clo" ? "g̃" : "b̃";
+  $("histTitle").textContent = `맨 위 네트워크의 ${MEASURES[m]} 히스토그램`;
+  plot($("histCv"), {
+    pad: { r: 60 },
+    x: { min: bins[0][0], max: bins[bins.length - 1][1], label: "*" + sym + "*", fmt: m === "deg" ? undefined : (x => +x.toFixed(3) + "") },
+    y: { min: 0, max: nmax * 1.1, label: "개수 *n*" },
+    series: [{ type: "bars", pts: bins, color: m === "btw" ? "path" : "node" }],
+    after: (ctx, X, Y, w, h, pad) => {
+      const st = niceStep(nmax * 1.1 / N, 4);
+      ctx.fillStyle = C.muted; ctx.font = "12px " + bodyFont(); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      for (let f = 0; f <= nmax * 1.1 / N + 1e-9; f += st) ctx.fillText(+f.toFixed(3) + "", w - pad.r + 6, Y(f * N));
+      ctx.save(); ctx.translate(w - 10, (pad.t + h - pad.b) / 2); ctx.rotate(Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = C.ink; ctx.textBaseline = "middle"; richText(ctx, "비율 *f*", 0, 0); ctx.restore();
+    }
+  });
+}
+
+/* ---------- axis scales ---------- */
+function drawScales(){
+  const s = document.querySelector('input[name="scale"]:checked').value;
+  const kmax = s === "log" ? 100 : 8, ex = [], pl = [];
+  for (let i = 0; i <= 400; i++){ const k = s === "log" ? Math.pow(10, i / 200) : 1 + (kmax - 1) * i / 400; ex.push([k, Math.exp(-k)]); pl.push([k, 0.5 * Math.pow(k, -3)]); }
+  plot($("scaleCv"), {
+    x: s === "log" ? { log: true, min: 1, max: 100, label: "*k*" } : { min: 1, max: 8, label: "*k*" },
+    y: s === "lin" ? { min: 0, max: 0.5, label: "*p*(*k*)", fmt: v => +v.toFixed(2) + "" } : { log: true, min: s === "log" ? 1e-6 : 1e-4, max: 1, label: "*p*(*k*)" },
+    series: [{ type: "line", pts: ex, color: "er", width: 2.6 }, { type: "line", pts: pl, color: "sf", width: 2.6 }]
+  });
+}
+document.querySelectorAll('input[name="scale"]').forEach(r => r.addEventListener("change", drawScales));
+
+/* ---------- cumulative distributions ---------- */
+let cum = null, cumToken = 0;
+async function runCum(){
+  const tok = ++cumToken, N = +$("cumN").value, gone = () => tok !== cumToken;
+  $("cumCancel").hidden = false;
+  $("cumStatus").textContent = `노드 ${N.toLocaleString("en-US")}개짜리 네트워크 두 개 만드는 중…`;
+  await pause(); if (gone()) return;
+  const sf = genBA(N, 2), er = largestComponent(genER(N, 4));
+  const bs = await brandesChunked(sf, false, gone, f => { $("cumStatus").textContent = `척도 없는 네트워크의 사이 중심도 계산 중… ${Math.round(f * 100)}%`; });
+  if (!bs) return;
+  const be = await brandesChunked(er, false, gone, f => { $("cumStatus").textContent = `무작위 네트워크의 사이 중심도 계산 중… ${Math.round(f * 100)}%`; });
+  if (!be) return;
+  cum = { sf, er, bs: bs.b, be: be.b };
+  $("cumCancel").hidden = true;
+  $("cumStatus").textContent = "";
+  drawCum();
+}
+$("cumCancel").addEventListener("click", () => { cumToken++; $("cumCancel").hidden = true;
+  if (cum) $("cumN").value = String(cum.sf.N);
+  $("cumStatus").textContent = cum ? `Cancelled; still showing ${cum.sf.N.toLocaleString("en-US")} nodes.` : "취소했습니다."; });
+function ccdf(vals){
+  const v = Array.from(vals).filter(x => x > 0).sort((a, b) => b - a), n = vals.length, out = [];
+  for (let i = 0; i < v.length; i++) if (i === v.length - 1 || v[i + 1] !== v[i]) out.push([v[i], (i + 1) / n]);
+  return out.reverse();
+}
+function pk(deg){ const h = new Map(); deg.forEach(k => h.set(k, (h.get(k) || 0) + 1)); return [...h.entries()].map(([k, c]) => [k, c / deg.length]); }
+function drawCum(){
+  if (!cum) return;
+  const raw = $("showRaw").checked, kmax = Math.max(...cum.sf.deg);
+  const series = [
+    { type: "line", pts: [[2, 1], [2000, 4e-6]], color: "muted", dash: true, width: 1.4 },
+    { type: "line", pts: ccdf(cum.er.deg), color: "er" }, { type: "line", pts: ccdf(cum.sf.deg), color: "sf" }
+  ];
+  if (raw) series.push({ type: "dots", pts: pk(Array.from(cum.er.deg)), color: "er", r: 2.8, shape: "diamond", alpha: .8 }, { type: "dots", pts: pk(Array.from(cum.sf.deg)), color: "sf", r: 2.6, alpha: .7 });
+  plot($("cumDeg"), { x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(kmax * 1.05))), label: "*k*" }, y: { log: true, min: Math.pow(10, -Math.ceil(Math.log10(cum.sf.N))), max: 1, label: "*P*(*k*)" }, series });
+  const bmax = Math.max(...cum.bs);
+  plot($("cumBtw"), { x: { log: true, min: 1, max: Math.pow(10, Math.ceil(Math.log10(bmax))), label: "*b*" }, y: { log: true, min: Math.pow(10, -Math.ceil(Math.log10(cum.sf.N))), max: 1, label: "*P*(*b*)" },
+    series: [{ type: "line", pts: ccdf(cum.be), color: "er" }, { type: "line", pts: ccdf(cum.bs), color: "sf" }] });
+}
+$("cumN").addEventListener("change", runCum);
+$("showRaw").addEventListener("change", drawCum);
+
+/* ---------- heterogeneity ---------- */
+const TABLE = [
+  ["페이스북 노스웨스턴 대학", 1.8], ["IMDB 영화와 배우", 5.4], ["IMDB 공동 출연", 4.6], ["트위터 미국 정치", 8.3],
+  ["엔론 이메일", 17.4], ["위키백과 수학", 38.2], ["인터넷 라우터", 6.0], ["미국 항공 운송", 5.3],
+  ["세계 항공 운송", 5.5], ["효모 단백질 상호작용", 2.7], ["예쁜꼬마선충 뇌", 2.7], ["에버글레이즈 생태 먹이 그물", 2.2]
+];
+let kap = null, kapToken = 0;
+const KN = [100, 300, 1000, 3000, 10000, 30000, 100000];
+function plSample(N, gam){
+  let s = 0, s2 = 0;
+  for (let i = 0; i < N; i++){ const k = Math.min(N - 1, Math.floor(2 * Math.pow(1 - Math.random(), -1 / (gam - 1)))); s += k; s2 += k * k; }
+  return (s2 / N) / Math.pow(s / N, 2);
+}
+async function runKappa(){
+  const tok = ++kapToken;
+  kap = { er: [], sf: [], pl: [] };
+  for (const N of KN){
+    $("kapStatus").textContent = `N = ${N.toLocaleString("en-US")}까지 네트워크를 키우는 중…`;
+    await pause(); if (tok !== kapToken) return;
+    kap.sf.push([N, degStats(genBA(N, 2).deg).kappa]);
+    kap.er.push([N, degStats(genER(N, 4).deg).kappa]);
+    drawKappa();
+  }
+  $("kapStatus").textContent = "";
+  samplePL();
+}
+function samplePL(){
+  if (!kap) return;
+  const gam = +$("kgIn").value;
+  kap.pl = KN.map(N => { const t = Array.from({ length: 21 }, () => plSample(N, gam)).sort((a, b) => a - b); return [N, t[10]]; });
+  drawKappa();
+}
+function drawKappa(){
+  if (!kap) return;
+  const all = [...kap.er, ...kap.sf, ...kap.pl].map(p => p[1]);
+  plot($("kapCv"), {
+    x: { log: true, min: 100, max: 100000, label: "네트워크 크기 *N*" },
+    y: { log: true, min: 1, max: Math.max(100, Math.pow(10, Math.ceil(Math.log10(Math.max(...all))))), label: "*κ* = ⟨*k*²⟩ / ⟨*k*⟩²" },
+    series: [
+      { type: "line", pts: kap.er, color: "er" }, { type: "dots", pts: kap.er, color: "er", r: 3.5 },
+      { type: "line", pts: kap.sf, color: "sf" }, { type: "dots", pts: kap.sf, color: "sf", r: 3.5 },
+      { type: "line", pts: kap.pl, color: "hub" }, { type: "dots", pts: kap.pl, color: "hub", r: 3.5 }
+    ]
+  });
+  const mine = [];
+  const at = arr => arr.find(p => p[0] === 10000);
+  if (at(kap.er)) mine.push(["직접 만든 무작위 네트워크", at(kap.er)[1], "er"]);
+  if (at(kap.sf)) mine.push(["Your scale-free network", at(kap.sf)[1], "sf"]);
+  const rows = TABLE.map(r => [r[0], r[1], ""]).concat(mine).sort((a, b) => b[1] - a[1]);
+  const lmax = Math.log10(60);
+  $("kapBars").innerHTML = rows.map(([n, k, c]) => `<div class="${c ? "mine " + c : ""}">${n}</div><div class="${c ? "mine " + c : ""}"><div class="bar" style="width:${Math.max(2, Math.log10(k) / lmax * 100)}%"></div></div><div class="num${c ? " mine" : ""}">${k.toFixed(1)}</div>`).join("");
+}
+$("kgIn").addEventListener("input", e => { $("kgOut").textContent = (+e.target.value).toFixed(1); });
+$("kgIn").addEventListener("change", samplePL);
+
+/* ---------- redraw on resize / theme change ---------- */
+function redrawAll(){ readColors(); heroView.draw(); drawHist(); drawGScale(); drawCorr(); drawScales(); drawCum(); drawKappa(); }
+let rT = 0;
+new ResizeObserver(() => { clearTimeout(rT); rT = setTimeout(redrawAll, 60); }).observe(document.body);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+if (document.fonts) document.fonts.ready.then(redrawAll);
+
+/* ---------- start ---------- */
+regenHero();
+drawClo();
+drawBtw();
+drawScales();
+const lazy = [[$("closeness"), runGScale], [$("correlation"), runCorr], [$("distributions"), runCum], [$("heterogeneity"), runKappa]];
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if (!en.isIntersecting) return;
+    const item = lazy.find(l => l[0] === en.target);
+    if (item && !item.done){ item.done = true; item[1](); io.unobserve(en.target); }
+  });
+}, { rootMargin: "200px" });
+lazy.forEach(l => io.observe(l[0]));
+})();
+</script>
+<script>if (window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], throwOnError: false, fleqn: true });</script>
+<script>
+(() => {
+  // light/dark switch; the choice is remembered across all of the course demos
+  const btn = document.getElementById("themeBtn"), root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+  const current = () => root.dataset.theme || (mq.matches ? "dark" : "light");
+  const sync = () => { const dark = current() === "dark", label = dark ? "밝은 화면으로 전환" : "어두운 화면으로 전환";
+    btn.innerHTML = dark ? SUN : MOON; btn.setAttribute("aria-label", label); btn.title = label; };
+  btn.addEventListener("click", () => { const next = current() === "dark" ? "light" : "dark"; root.dataset.theme = next;
+    try { localStorage.setItem("netsci-theme", next); } catch (e) {} sync(); });
+  mq.addEventListener("change", sync);
+  sync();
+})();
+</script>
+</body>
+</html>

@@ -2,6 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- lang-link:head -->
+<script>(function(){var p=null;try{p=localStorage.getItem("lshlj82-demo-lang")}catch(e){}if(p&&p!=="en"&&!/[?&]stay\b/.test(location.search))location.replace("ko.html"+location.hash);})();</script>
+<style>
+#langBtn{position:fixed;z-index:21;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(env(safe-area-inset-right,0px) + 60px);min-width:40px;height:40px;padding:0 10px;border-radius:20px;display:grid;place-items:center;cursor:pointer;text-decoration:none;font:600 14px/1 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--lb-bg,rgba(255,255,255,.92));color:var(--lb-fg,#1d2633);border:1px solid var(--lb-bd,rgba(20,30,45,.18));box-shadow:0 1px 4px rgba(0,0,0,.12)}
+#langBtn:hover{border-color:currentColor}
+#langBtn:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+:root[data-theme="dark"] #langBtn{--lb-bg:rgba(22,28,38,.92);--lb-fg:#e8eef6;--lb-bd:rgba(255,255,255,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #langBtn{--lb-bg:rgba(22,28,38,.92);--lb-fg:#e8eef6;--lb-bd:rgba(255,255,255,.18)}}
+@media print{#langBtn{display:none}}
+html[lang="ko"] body{word-break:keep-all;overflow-wrap:break-word}
+</style>
+<!-- lang-link:head-end -->
+
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Network centrality · 네트워크 중심도 | Network Science demos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -162,6 +176,10 @@ h1.course-title{margin-top:48px !important}
 </style>
 </head>
 <body>
+<!-- lang-link:body -->
+<a id="langBtn" href="ko.html" hreflang="ko" lang="ko" aria-label="한국어로 보기" title="한국어로 보기">한국어</a>
+<script>document.getElementById("langBtn").addEventListener("click",function(){try{localStorage.setItem("lshlj82-demo-lang","ko")}catch(e){}});</script>
+<!-- lang-link:body-end -->
 <button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
 <div class="tip" id="tip"></div>
 
